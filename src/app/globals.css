@@ -1,26 +1,327 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Deep near-black — more cinematic than flat black */
+  --color-background: #080c14;
+  --color-foreground: #e2e8f0;
+
+  /* Royal violet — premium, modern accent */
+  --color-primary: #a78bfa;
+  --color-primary-foreground: #1e0a3c;
+
+  --color-card: #0f1420;
+  --color-card-foreground: #e2e8f0;
+
+  --color-muted: #1a2035;
+  --color-muted-foreground: #94a3b8;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-muted);
   }
 }
 
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  max-width: 1400px;
+}
+
+/* ── Base & Cinematic Look ── */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Hide scrollbar for horizontal rows ── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── Smooth image loading fade-in ── */
+img {
+  transition: opacity 0.4s ease;
+}
+
+/* ── Selection color ── */
+::selection {
+  background-color: #a78bfa40;
+  color: white;
+}
+
+/* ── Focus visible for a11y (exclude inputs — they use custom focus) ── */
+:focus-visible:not(input):not(textarea) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Remove all focus outlines from inputs (search bar etc.) ── */
+input,
+textarea {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+input:focus,
+input:focus-visible,
+input:focus-within,
+textarea:focus,
+textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* ── Custom scrollbar for dark theme ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ═══════════════════════════════════════════════
+   QClay-Inspired Animations & Effects
+   ═══════════════════════════════════════════════ */
+
+/* ── Animated gradient shift ── */
+@keyframes gradient-shift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease-in-out infinite;
+}
+
+/* ── Floating animation ── */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: float 9s ease-in-out infinite;
+}
+
+.animate-float-delay {
+  animation: float 7s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+/* ── Glow pulse ── */
+@keyframes glow-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(94, 234, 212, 0.15);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(94, 234, 212, 0.3), 0 0 80px rgba(94, 234, 212, 0.1);
+  }
+}
+
+.animate-glow {
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+/* ── Subtle scale-in entrance ── */
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s ease-out forwards;
+}
+
+/* ── Staggered slide-up entrance ── */
+@keyframes fade-up {
+  from {
+    transform: translateY(16px);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out both;
+}
+
+/* ── Shimmer effect for loading ── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(94, 234, 212, 0.05), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ── Glassmorphism utility ── */
+.glass {
+  background: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-strong {
+  background: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Animated gradient border ── */
+@keyframes border-gradient {
+
+  0%,
+  100% {
+    border-color: rgba(94, 234, 212, 0.2);
+  }
+
+  50% {
+    border-color: rgba(94, 234, 212, 0.5);
+  }
+}
+
+.animate-border {
+  animation: border-gradient 3s ease-in-out infinite;
+}
+
+/* ── Gradient text ── */
+.gradient-text {
+  background: linear-gradient(135deg, #5eead4, #a78bfa, #f472b6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Animated orb background ── */
+@keyframes orb-move {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  25% {
+    transform: translate(30px, -20px) scale(1.05);
+  }
+
+  50% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+
+  75% {
+    transform: translate(20px, 10px) scale(1.02);
+  }
+}
+
+.animate-orb {
+  animation: orb-move 15s ease-in-out infinite;
+}
+
+.animate-orb-delay {
+  animation: orb-move 18s ease-in-out infinite;
+  animation-delay: 5s;
+}
+
+/* ── Section entrance stagger ── */
+.stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.stagger-5 {
+  animation-delay: 0.5s;
+}
+
+.stagger-6 {
+  animation-delay: 0.6s;
+}
+
+/* ── Card hover with subtle 3D tilt ── */
+.card-hover {
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3), 0 0 24px rgba(94, 234, 212, 0.08);
 }
