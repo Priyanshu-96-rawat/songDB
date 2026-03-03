@@ -1,35 +1,19 @@
-import { getFeaturedSongAction, getTrendingSongsAction, getTopArtistsAction, getTopTagsAction, getNewsAction, extractLastFmImage } from "@/app/actions";
+import { getFeaturedSongAction, getTrendingSongsAction, getTopArtistsAction, getTopTagsAction, getNewsAction } from "@/app/actions";
 import { resolveTrackImage, batchResolveTrackImages, batchResolveArtistImages } from "@/lib/imageResolver";
 import { SongCard } from "@/components/ui/SongCard";
 import { ArtistCard } from "@/components/ui/ArtistCard";
-import { Play, TrendingUp, Users, Disc3, Sparkles, ChevronRight, Newspaper, Tag, Youtube, ExternalLink } from "lucide-react";
+import { TrendingUp, Users, Disc3, Sparkles, ChevronRight, Newspaper, Tag, Youtube } from "lucide-react";
 import Link from "next/link";
 
-const GRADIENTS = [
-  'from-violet-600 via-purple-500 to-indigo-600',
-  'from-rose-600 via-pink-500 to-fuchsia-600',
-  'from-amber-600 via-orange-500 to-red-500',
-  'from-emerald-600 via-teal-500 to-cyan-600',
-  'from-blue-600 via-indigo-500 to-violet-600',
-  'from-pink-500 via-rose-500 to-orange-500',
-  'from-teal-500 via-emerald-500 to-lime-500',
-  'from-sky-600 via-blue-500 to-indigo-500',
-  'from-fuchsia-600 via-purple-600 to-blue-600',
-  'from-orange-500 via-amber-500 to-yellow-500',
-];
-function getGradient(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
-  return GRADIENTS[Math.abs(hash) % GRADIENTS.length];
-}
+import { getDynamicGradientStyle } from "@/lib/colors";
 
 export default async function Home() {
   // Fetch all data from real APIs in parallel
   const [featuredDay, trending, topArtistsRaw, topTags, newsArticles] = await Promise.all([
-    getFeaturedSongAction(),
-    getTrendingSongsAction(12),
-    getTopArtistsAction(10),
-    getTopTagsAction(15),
+    getFeaturedSongAction().catch(() => null),
+    getTrendingSongsAction(12).catch(() => []),
+    getTopArtistsAction(10).catch(() => []),
+    getTopTagsAction(15).catch(() => []),
     getNewsAction().catch(() => []),
   ]);
 
@@ -51,7 +35,7 @@ export default async function Home() {
   }));
   const trendingImages = await batchResolveTrackImages(trendingPrepared, 10);
 
-  const enrichedTrending = trendingPrepared.map((track, i: number) => ({
+  const enrichedTrending = trendingPrepared.map((track: any, i: number) => ({
     id: encodeURIComponent(track.name),
     title: track.name,
     artist: track.artist,
@@ -68,7 +52,7 @@ export default async function Home() {
   }));
   const artistImages = await batchResolveArtistImages(artistsPrepared, 10);
 
-  const enrichedArtists = artistsPrepared.map((artist, i: number) => ({
+  const enrichedArtists = artistsPrepared.map((artist: any, i: number) => ({
     id: artist.name,
     name: artist.name,
     image: artistImages[i],
@@ -109,6 +93,9 @@ export default async function Home() {
               </div>
 
               <div className="flex-1">
+                <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-4 animate-fade-up">
+                  Discover Your Sound
+                </h2>
                 <div className="flex items-center gap-2 mb-4">
                   <Sparkles className="w-4 h-4 text-primary" />
                   <span className="inline-block py-1 px-3 rounded-full bg-primary/15 text-primary text-[11px] font-bold uppercase tracking-[0.15em] border border-primary/20 animate-glow">
@@ -220,7 +207,7 @@ export default async function Home() {
             </Link>
           </div>
           <div className="flex gap-5 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
-            {enrichedTrending.map((track) => (
+            {enrichedTrending.map((track: any) => (
               <div key={track.id + track.rank} className="snap-start">
                 <SongCard
                   id={track.id}
@@ -252,7 +239,7 @@ export default async function Home() {
             </Link>
           </div>
           <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
-            {enrichedArtists.map((artist) => (
+            {enrichedArtists.map((artist: any) => (
               <div key={artist.id} className="snap-start pt-1">
                 <ArtistCard
                   id={artist.id}
@@ -284,7 +271,7 @@ export default async function Home() {
               <span className="hidden md:block text-right">Listeners</span>
               <span className="text-right">Plays</span>
             </div>
-            {enrichedTrending.slice(0, 10).map((track, i) => (
+            {enrichedTrending.slice(0, 10).map((track: any, i: number) => (
               <div
                 key={track.id + '-table-' + i}
                 className="grid grid-cols-[40px_1fr_1fr_50px_100px] md:grid-cols-[50px_1fr_1fr_50px_120px_120px] gap-3 px-4 py-3 items-center border-b border-white/[0.03] hover:bg-white/[0.03] transition-colors group"
@@ -297,7 +284,7 @@ export default async function Home() {
                     {track.coverArt ? (
                       <img src={track.coverArt} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${getGradient(track.title)}`}>
+                      <div className="w-full h-full flex items-center justify-center" style={getDynamicGradientStyle(track.title)}>
                         <span className="text-xs font-bold text-white/40">{track.title?.charAt(0)?.toUpperCase()}</span>
                       </div>
                     )}
@@ -358,7 +345,7 @@ export default async function Home() {
                     {article.urlToImage ? (
                       <img src={article.urlToImage} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
-                      <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${getGradient(article.title)}`}>
+                      <div className="w-full h-full flex items-center justify-center" style={getDynamicGradientStyle(article.title)}>
                         <span className="text-xs font-bold text-white/40">{article.title?.charAt(0)?.toUpperCase()}</span>
                       </div>
                     )}

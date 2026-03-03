@@ -1,19 +1,27 @@
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
 
 @theme {
-  /* Deep near-black — more cinematic than flat black */
-  --color-background: #080c14;
-  --color-foreground: #e2e8f0;
+  /* Deep Space Background */
+  --color-background: #0A0A0F;
+  --color-foreground: #FFFFFF;
 
-  /* Royal violet — premium, modern accent */
-  --color-primary: #a78bfa;
-  --color-primary-foreground: #1e0a3c;
+  /* Electric Purple — primary accent */
+  --color-primary: #6C63FF;
+  --color-primary-foreground: #FFFFFF;
 
-  --color-card: #0f1420;
-  --color-card-foreground: #e2e8f0;
+  /* Coral Pink — secondary accent */
+  --color-secondary: #FF6584;
+  --color-secondary-foreground: #FFFFFF;
 
-  --color-muted: #1a2035;
-  --color-muted-foreground: #94a3b8;
+  /* Navy Dark for cards */
+  --color-card: #1A1A2E;
+  --color-card-foreground: #FFFFFF;
+
+  /* Muted Slate */
+  --color-muted: #1A1A2E;
+  /* Keep muted same as card for subtle diffs, or slightly distinct */
+  --color-muted-foreground: #A0A0B0;
 
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
@@ -62,7 +70,8 @@ img {
 
 /* ── Selection color ── */
 ::selection {
-  background-color: #a78bfa40;
+  background-color: rgba(108, 99, 255, 0.3);
+  /* #6C63FF with opacity */
   color: white;
 }
 
@@ -99,12 +108,13 @@ textarea:focus-visible {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: rgba(108, 99, 255, 0.4);
+  /* Thin purple scrollbar */
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: rgba(108, 99, 255, 0.7);
 }
 
 /* ═══════════════════════════════════════════════
@@ -155,16 +165,15 @@ textarea:focus-visible {
   animation-delay: 2s;
 }
 
-/* ── Glow pulse ── */
 @keyframes glow-pulse {
 
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(94, 234, 212, 0.15);
+    box-shadow: 0 0 20px rgba(108, 99, 255, 0.2);
   }
 
   50% {
-    box-shadow: 0 0 40px rgba(94, 234, 212, 0.3), 0 0 80px rgba(94, 234, 212, 0.1);
+    box-shadow: 0 0 40px rgba(108, 99, 255, 0.4), 0 0 80px rgba(255, 101, 132, 0.2);
   }
 }
 
@@ -216,7 +225,7 @@ textarea:focus-visible {
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(94, 234, 212, 0.05), transparent);
+  background: linear-gradient(90deg, transparent, rgba(108, 99, 255, 0.1), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
 }
@@ -241,11 +250,11 @@ textarea:focus-visible {
 
   0%,
   100% {
-    border-color: rgba(94, 234, 212, 0.2);
+    border-color: rgba(108, 99, 255, 0.3);
   }
 
   50% {
-    border-color: rgba(94, 234, 212, 0.5);
+    border-color: rgba(255, 101, 132, 0.4);
   }
 }
 
@@ -255,7 +264,7 @@ textarea:focus-visible {
 
 /* ── Gradient text ── */
 .gradient-text {
-  background: linear-gradient(135deg, #5eead4, #a78bfa, #f472b6);
+  background: linear-gradient(135deg, #6C63FF, #FF6584);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -323,5 +332,5 @@ textarea:focus-visible {
 
 .card-hover:hover {
   transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3), 0 0 24px rgba(94, 234, 212, 0.08);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4), 0 0 24px rgba(108, 99, 255, 0.15);
 }
