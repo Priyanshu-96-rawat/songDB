@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Default: DENY ALL ───
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ─── Users ───
+    match /users/{userId} {
+      // Public read of profile fields
+      allow read: if true;
+      // Only the user themselves can update their own profile
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
+      // Creation handled by admin SDK / Cloud Functions
+      allow create: if false;
+    }
+
+    // ─── Songs ───
+    match /songs/{songId} {
+      allow read: if resource.data.deleted_at == null;
+      allow write: if false; // Admin SDK only
+    }
+
+    // ─── Artists ───
+    match /artists/{artistId} {
+      allow read: if resource.data.deleted_at == null;
+      allow write: if false; // Admin SDK only
+    }
+
+    // ─── Albums ───
+    match /albums/{albumId} {
+      allow read: if resource.data.deleted_at == null;
+      allow write: if false; // Admin SDK only
+    }
+
+    // ─── Reviews ───
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if true;
+
+      // Authenticated users can create reviews for themselves
+      allow create: if request.auth != null
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.review_text is string
+        && request.resource.data.review_text.size() >= 5
+        && request.resource.data.review_text.size() <= 500;
+
+      // Only owner can update/delete their review
+      allow update, delete: if request.auth != null
+        && resource.data.user_id == request.auth.uid;
+    }
+  }
+}

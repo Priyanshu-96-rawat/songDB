@@ -1,32 +1,33 @@
 @import "tailwindcss";
-@plugin "tailwindcss-animate";
+@source "../";
 
 @theme {
-  /* Deep Space Background */
-  --color-background: #0A0A0F;
+  --color-background: #121212;
   --color-foreground: #FFFFFF;
 
-  /* Electric Purple — primary accent */
-  --color-primary: #6C63FF;
-  --color-primary-foreground: #FFFFFF;
+  --color-primary: #00D4AA;
+  --color-primary-foreground: #121212;
 
-  /* Coral Pink — secondary accent */
-  --color-secondary: #FF6584;
+  --color-secondary: #FF6B6B;
   --color-secondary-foreground: #FFFFFF;
 
-  /* Navy Dark for cards */
-  --color-card: #1A1A2E;
+  --color-card: #181818;
   --color-card-foreground: #FFFFFF;
 
-  /* Muted Slate */
-  --color-muted: #1A1A2E;
-  /* Keep muted same as card for subtle diffs, or slightly distinct */
-  --color-muted-foreground: #A0A0B0;
+  --color-muted: #282828;
+  --color-muted-foreground: #B3B3B3;
 
+  --color-accent: #1ED760;
+  --color-accent-foreground: #121212;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
   --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
+  --radius-2xl: 1.25rem;
 }
 
+/* ── Base ── */
 @layer base {
 
   *,
@@ -38,13 +39,14 @@
   }
 }
 
-@utility container {
-  margin-inline: auto;
-  padding-inline: 1.5rem;
-  max-width: 1400px;
+@layer utilities {
+  .container {
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+    max-width: 1400px;
+  }
 }
 
-/* ── Base & Cinematic Look ── */
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
@@ -63,25 +65,24 @@ body {
   scrollbar-width: none;
 }
 
-/* ── Smooth image loading fade-in ── */
+/* ── Smooth image loading ── */
 img {
   transition: opacity 0.4s ease;
 }
 
-/* ── Selection color ── */
+/* ── Selection ── */
 ::selection {
-  background-color: rgba(108, 99, 255, 0.3);
-  /* #6C63FF with opacity */
-  color: white;
+  background-color: rgba(0, 212, 170, 0.35);
+  color: #121212;
 }
 
-/* ── Focus visible for a11y (exclude inputs — they use custom focus) ── */
+/* ── Focus ring ── */
 :focus-visible:not(input):not(textarea) {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
-/* ── Remove all focus outlines from inputs (search bar etc.) ── */
+/* ── Remove input outlines ── */
 input,
 textarea {
   outline: none !important;
@@ -98,7 +99,7 @@ textarea:focus-visible {
   border-color: transparent !important;
 }
 
-/* ── Custom scrollbar for dark theme ── */
+/* ── Custom scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -108,20 +109,18 @@ textarea:focus-visible {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(108, 99, 255, 0.4);
-  /* Thin purple scrollbar */
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(108, 99, 255, 0.7);
+  background: rgba(255, 255, 255, 0.25);
 }
 
-/* ═══════════════════════════════════════════════
-   QClay-Inspired Animations & Effects
-   ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════ */
 
-/* ── Animated gradient shift ── */
 @keyframes gradient-shift {
 
   0%,
@@ -139,7 +138,6 @@ textarea:focus-visible {
   animation: gradient-shift 8s ease-in-out infinite;
 }
 
-/* ── Floating animation ── */
 @keyframes float {
 
   0%,
@@ -169,11 +167,11 @@ textarea:focus-visible {
 
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(108, 99, 255, 0.2);
+    box-shadow: 0 0 20px rgba(0, 212, 170, 0.15);
   }
 
   50% {
-    box-shadow: 0 0 40px rgba(108, 99, 255, 0.4), 0 0 80px rgba(255, 101, 132, 0.2);
+    box-shadow: 0 0 40px rgba(0, 212, 170, 0.25), 0 0 60px rgba(255, 107, 107, 0.1);
   }
 }
 
@@ -181,7 +179,6 @@ textarea:focus-visible {
   animation: glow-pulse 4s ease-in-out infinite;
 }
 
-/* ── Subtle scale-in entrance ── */
 @keyframes scale-in {
   0% {
     opacity: 0;
@@ -198,13 +195,14 @@ textarea:focus-visible {
   animation: scale-in 0.5s ease-out forwards;
 }
 
-/* ── Staggered slide-up entrance ── */
 @keyframes fade-up {
   from {
+    opacity: 0;
     transform: translateY(16px);
   }
 
   to {
+    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -213,7 +211,6 @@ textarea:focus-visible {
   animation: fade-up 0.6s ease-out both;
 }
 
-/* ── Shimmer effect for loading ── */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -225,23 +222,19 @@ textarea:focus-visible {
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(108, 99, 255, 0.1), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 170, 0.08), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
 }
 
-/* ── Glassmorphism utility ── */
+/* ── Spotify-like elevated surfaces ── */
 .glass {
-  background: rgba(17, 24, 39, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(24, 24, 24, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .glass-strong {
-  background: rgba(17, 24, 39, 0.8);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: rgba(40, 40, 40, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -250,11 +243,11 @@ textarea:focus-visible {
 
   0%,
   100% {
-    border-color: rgba(108, 99, 255, 0.3);
+    border-color: rgba(0, 212, 170, 0.3);
   }
 
   50% {
-    border-color: rgba(255, 101, 132, 0.4);
+    border-color: rgba(255, 107, 107, 0.4);
   }
 }
 
@@ -264,13 +257,13 @@ textarea:focus-visible {
 
 /* ── Gradient text ── */
 .gradient-text {
-  background: linear-gradient(135deg, #6C63FF, #FF6584);
+  background: linear-gradient(135deg, #00D4AA, #FF6B6B);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ── Animated orb background ── */
+/* ── Animated orb ── */
 @keyframes orb-move {
 
   0%,
@@ -325,12 +318,31 @@ textarea:focus-visible {
   animation-delay: 0.6s;
 }
 
-/* ── Card hover with subtle 3D tilt ── */
+/* ── Card hover ── */
 .card-hover {
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
 }
 
 .card-hover:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4), 0 0 24px rgba(108, 99, 255, 0.15);
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 24px rgba(0, 212, 170, 0.08);
+}
+
+/* ── Row hover ── */
+.row-hover {
+  transition: background-color 0.15s ease;
+}
+
+.row-hover:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Sidebar nav link ── */
+.sidebar-link {
+  color: #B3B3B3;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.sidebar-link:hover {
+  color: #FFFFFF;
 }

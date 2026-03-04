@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/context/AuthContext';
+import { Sidebar } from '@/components/shared/Sidebar';
 import { TopNav } from '@/components/shared/TopNav';
 import { SplashScreen } from '@/components/shared/SplashScreen';
 import './globals.css';
@@ -19,13 +20,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang='en'>
-      <body className={`${inter.className} min-h-screen pb-24 bg-background text-foreground`}>
+      <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
         <AuthProvider>
           <SplashScreen />
-          <TopNav />
-          <main>
-            {children}
-          </main>
+          <Sidebar />
+          <div className="ml-16 md:ml-60 min-h-screen flex flex-col">
+            <TopNav />
+            <main className="flex-1 pb-8">
+              {children}
+            </main>
+          </div>
         </AuthProvider>
       </body>
     </html>
