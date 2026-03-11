@@ -1,0 +1,8 @@
+[phases.setup]
+aptPkgs = ["python3", "yt-dlp"]
+
+[phases.build]
+cmds = ["npm install", "npm run build"]
+
+[start]
+cmd = "npm start"
