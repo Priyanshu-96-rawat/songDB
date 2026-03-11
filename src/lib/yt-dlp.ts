@@ -172,10 +172,8 @@ async function dumpVideoJson(videoId: string, forceRefresh = false): Promise<YtD
         return cached.value;
     }
 
-    const python = process.env.PYTHON_BIN || 'python';
+    const ytDlp = process.env.YTDLP_BIN || 'yt-dlp';
     const args = [
-        '-m',
-        'yt_dlp',
         '--dump-single-json',
         '--no-warnings',
         '--no-playlist',
@@ -187,7 +185,7 @@ async function dumpVideoJson(videoId: string, forceRefresh = false): Promise<YtD
         getVideoUrl(videoId),
     ];
 
-    const { stdout } = await execFileAsync(python, args, {
+    const { stdout } = await execFileAsync(ytDlp, args, {
         windowsHide: true,
         maxBuffer: 50 * 1024 * 1024, // Increased buffer for large metadata
     });
