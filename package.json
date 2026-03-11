@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p $PORT",
+    "start": "next start -p $PORT -H 0.0.0.0",
     "lint": "eslint",
     "test:e2e": "playwright test"
   },
