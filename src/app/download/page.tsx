@@ -80,11 +80,15 @@ interface BeforeInstallPromptEvent extends Event {
 export default function DownloadPage() {
     const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [justInstalled, setJustInstalled] = useState(false);
-    const [isInstalled, setIsInstalled] = useState(() =>
-        typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches
-    );
+    const [hasMounted, setHasMounted] = useState(false);
+    const [isInstalled, setIsInstalled] = useState(false);
 
     useEffect(() => {
+        setHasMounted(true);
+        if (typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches) {
+            setIsInstalled(true);
+        }
+
         const handler = (e: Event) => {
             e.preventDefault();
             setInstallPrompt(e as BeforeInstallPromptEvent);
@@ -93,13 +97,19 @@ export default function DownloadPage() {
         return () => window.removeEventListener("beforeinstallprompt", handler);
     }, []);
 
-    const appUrl = typeof window !== 'undefined' ? window.location.origin : "";
-    const isMobile = typeof navigator !== 'undefined' ? /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) : false;
+    const appUrl = useMemo(() => {
+        if (!hasMounted) return "";
+        return window.location.origin;
+    }, [hasMounted]);
+
+    const isMobile = useMemo(() => {
+        if (!hasMounted) return false;
+        return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }, [hasMounted]);
 
     const qrDataUrl = useMemo(() => {
         if (!appUrl) return "";
-        const svg = generateQRSVG(appUrl, 180);
-        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(appUrl)}&bgcolor=FFFFFF&color=06080d&margin=10`;
     }, [appUrl]);
 
     const handleInstall = useCallback(async () => {
@@ -223,9 +233,19 @@ export default function DownloadPage() {
                     </div>
 
                     {/* QR Code */}
-                    <div className="p-3 rounded-2xl bg-white shadow-[0_0_40px_rgba(255,255,255,0.05)]">
+                    <div className="p-3 rounded-2xl bg-white shadow-[0_0_40px_rgba(255,255,255,0.05)] overflow-hidden">
                         {qrDataUrl ? (
-                            <Image src={qrDataUrl} width={180} height={180} unoptimized alt={`QR code for ${appUrl}`} className="w-[180px] h-[180px]" />
+                            <Image 
+                                src={qrDataUrl} 
+                                width={180} 
+                                height={180} 
+                                unoptimized 
+                                alt={`QR code for ${appUrl}`} 
+                                className="w-[180px] h-[180px] opacity-100 transition-opacity duration-300"
+                                onLoad={(e) => {
+                                    (e.target as HTMLImageElement).classList.remove('opacity-0');
+                                }}
+                            />
                         ) : (
                             <div className="w-[180px] h-[180px] animate-pulse rounded-xl bg-black/5" />
                         )}

@@ -1,7 +1,9 @@
+export const dynamic = "force-dynamic";
 import { getTopRatedSongsAction } from "@/app/actions";
 import { Trophy, Star, ArrowLeft, Music } from "lucide-react";
 import { getGradientClass } from "@/lib/colors";
 import Link from "next/link";
+
 
 export const revalidate = 3600; // 1 hour
 
