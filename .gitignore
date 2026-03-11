@@ -1,47 +1,71 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Build outputs
+.next/
+out/
+build/
+dist/
 
-# testing
-/coverage
+# Environment variables - NEVER commit these
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test.local
+.env.production
+.env.production.local
 
-# next.js
-/.next/
-/out/
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+firebase-service-account*.json
+*-service-account.json
+serviceAccountKey.json
 
-# production
-/build
+# Debug & log files
+*.log
+*.log.*
+build.log
+build_output.log
+build_output.txt
+dev-server.out.log
+dev-server.err.log
+ts_errors.txt
+ts_errors2.txt
+eslint_output.txt
+eslint_output_2.txt
+lint.txt
+lint_output.txt
+lint-results.json
+lint-results.txt
+lint-errors-summary.json
+format-output.txt
 
-# misc
+# Temp/debug scripts
+tmp-*.js
+stitch_raw.html
+current_changes.patch
+build-errors.txt
+
+# Test results
+test-results/
+playwright-report/
+
+# OS files
 .DS_Store
-*.pem
+Thumbs.db
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
-
-# error logs
-error.log
-
-# cline
-cline
