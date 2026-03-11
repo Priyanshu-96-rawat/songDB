@@ -7,6 +7,7 @@ import type { Review } from "@/schemas/reviewSchema";
 import type { Favorite } from "@/schemas/favoriteSchema";
 import { Star, Heart, MessageCircle, Music, User, BarChart3, Loader2 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { getGradientClass } from "@/lib/colors";
 import { redirect } from "next/navigation";
 
@@ -178,9 +179,9 @@ export default function ProfilePage() {
                                             href={`/song/${encodeURIComponent(`${fav.artist_name} - ${fav.item_name}`)}`}
                                             className="flex items-center gap-3 bg-card/50 rounded-xl p-4 border border-white/5 hover:border-white/10 transition-colors group"
                                         >
-                                            <div className={`w-10 h-10 rounded-lg shrink-0 overflow-hidden bg-gradient-to-br ${getGradientClass(fav.item_name)} flex items-center justify-center`}>
+                                            <div className={`w-10 h-10 rounded-lg shrink-0 overflow-hidden bg-gradient-to-br ${getGradientClass(fav.item_name)} flex items-center justify-center relative`}>
                                                 {fav.image_url ? (
-                                                    <img src={fav.image_url} alt="" className="w-full h-full object-cover" />
+                                                    <Image src={fav.image_url} alt="" fill className="object-cover" unoptimized />
                                                 ) : (
                                                     <Music className="w-4 h-4 text-white/40" />
                                                 )}
@@ -206,9 +207,9 @@ export default function ProfilePage() {
                                             href={`/artist/${encodeURIComponent(fav.item_name)}`}
                                             className="flex items-center gap-3 bg-card/50 rounded-xl p-4 border border-white/5 hover:border-white/10 transition-colors group"
                                         >
-                                            <div className={`w-10 h-10 rounded-full shrink-0 overflow-hidden bg-gradient-to-br ${getGradientClass(fav.item_name)} flex items-center justify-center`}>
+                                            <div className={`w-10 h-10 rounded-full shrink-0 overflow-hidden bg-gradient-to-br ${getGradientClass(fav.item_name)} flex items-center justify-center relative`}>
                                                 {fav.image_url ? (
-                                                    <img src={fav.image_url} alt="" className="w-full h-full object-cover" />
+                                                    <Image src={fav.image_url} alt="" fill className="object-cover" unoptimized />
                                                 ) : (
                                                     <span className="text-sm font-bold text-white/40">{fav.item_name.charAt(0)}</span>
                                                 )}

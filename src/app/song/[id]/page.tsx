@@ -1,10 +1,11 @@
+
 import { getSongInfoAction } from '@/app/actions';
 import Image from 'next/image';
 import Link from 'next/link';
 import { fetchImageFromiTunes } from '@/lib/musicbrainz';
 import { extractLastFmImage } from '@/lib/lastfm';
 import { getGradientClass } from '@/lib/colors';
-import { Play, Youtube, Disc3, Tag, Sparkles, User } from 'lucide-react';
+import { Youtube, Disc3, Tag, Sparkles, User } from 'lucide-react';
 import { ReviewSection } from '@/components/ui/ReviewSection';
 import { FavoriteButton } from '@/components/ui/FavoriteButton';
 import { RatingBreakdown } from '@/components/ui/RatingBreakdown';
@@ -28,7 +29,7 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
                 <div className="text-center">
                     <Disc3 className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
                     <h1 className="text-2xl font-bold mb-2">Song Not Found</h1>
-                    <p className="text-muted-foreground">We couldn't find this track.</p>
+                    <p className="text-muted-foreground">We couldn&apos;t find this track.</p>
                     <Link href="/" className="inline-block mt-6 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:scale-105 transition-transform">
                         Go Home
                     </Link>
@@ -39,7 +40,7 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
 
     // Safely extract artist name (Last.fm returns {name, url} or a string)
     const songArtist = typeof song.artist === 'object' ? song.artist?.name || '' : String(song.artist || '');
-    const songAlbum = typeof song.album === 'object' ? (song.album as any)?.title || (song.album as any)?.name || '' : String(song.album || '');
+    const songAlbum = typeof song.album === 'object' ? (song.album as Record<string, string>)?.title || (song.album as Record<string, string>)?.name || '' : String(song.album || '');
 
     // Resolve image
     let songImage = extractLastFmImage(song.image, 'extralarge');
@@ -53,19 +54,21 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
             <section className="relative w-full h-[55vh] min-h-[420px] flex items-end overflow-hidden">
                 <div className="absolute inset-0 bg-background z-[1]" />
                 {songImage && (
-                    <img
+                    <Image
                         src={songImage}
                         alt=""
-                        className="absolute inset-0 w-full h-full object-cover opacity-30 blur-2xl scale-110 z-[2]"
+                        fill
+                        className="object-cover opacity-30 blur-2xl scale-110 z-[2]"
+                        unoptimized
                     />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent z-[3]" />
 
                 <div className="container relative z-10 pb-12 flex gap-8 items-end">
                     {/* Cover Art */}
-                    <div className="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/10 shrink-0">
+                    <div className="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/10 shrink-0 relative">
                         {songImage ? (
-                            <img src={songImage} alt={song.name} className="w-full h-full object-cover" />
+                            <Image src={songImage} alt={song.name} fill className="object-cover" unoptimized />
                         ) : (
                             <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${getGradientClass(song.name)}`}>
                                 <span className="text-5xl font-black text-white/30">{song.name.charAt(0).toUpperCase()}</span>
@@ -157,7 +160,7 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
                                 <Tag className="w-4 h-4" /> Genre & Tags
                             </h3>
                             <div className="flex flex-wrap gap-2">
-                                {song.toptags.tag.map((tag: any) => (
+                                {song.toptags.tag.map((tag: { name: string }) => (
                                     <span key={tag.name} className="px-3 py-1.5 rounded-full bg-muted text-xs font-medium text-muted-foreground">
                                         {tag.name}
                                     </span>

@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, Mail, Lock, Github, Chrome } from "lucide-react";
+import { LogIn, Mail, Lock, Chrome } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
@@ -31,8 +31,8 @@ export default function LoginPage() {
         try {
             await signInWithEmailAndPassword(auth, email, password);
             router.push("/");
-        } catch (err: any) {
-            setError(err.message || "Failed to log in");
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to log in");
         } finally {
             setLoading(false);
         }
@@ -53,11 +53,11 @@ export default function LoginPage() {
                     <motion.div
                         initial={{ scale: 0.8 }}
                         animate={{ scale: 1 }}
-                        className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(245,158,11,0.3)]"
+                        className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(0,255,255,0.3)]"
                     >
                         <LogIn className="text-primary-foreground w-8 h-8" />
                     </motion.div>
-                    <h1 className="text-3xl font-black uppercase tracking-tighter italic">Welcome Back</h1>
+                    <h1 className="text-3xl font-black uppercase tracking-tighter">Welcome Back</h1>
                     <p className="text-white/50 text-sm mt-2">Log in to your SongDB account</p>
                 </div>
 
@@ -101,7 +101,7 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] disabled:opacity-50 mt-4 active:scale-95"
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] disabled:opacity-50 mt-4 active:scale-95"
                     >
                         {loading ? "Authenticating..." : "CONTINUE"}
                     </button>
@@ -112,26 +112,20 @@ export default function LoginPage() {
                         <div className="w-full border-t border-white/5"></div>
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-[#0a0a0a] px-4 text-white/30 tracking-widest font-medium">Or continue with</span>
+                        <span className="bg-black px-4 text-white/30 tracking-widest font-medium">Or continue with</span>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <button
-                        onClick={signInWithGoogle}
-                        className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 py-3.5 rounded-2xl transition-colors text-sm font-medium"
-                    >
-                        <Chrome className="w-4 h-4" />
-                        Google
-                    </button>
-                    <button className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 py-3.5 rounded-2xl transition-colors text-sm font-medium opacity-50 cursor-not-allowed">
-                        <Github className="w-4 h-4" />
-                        GitHub
-                    </button>
-                </div>
+                <button
+                    onClick={signInWithGoogle}
+                    className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 py-3.5 rounded-2xl transition-colors text-sm font-medium"
+                >
+                    <Chrome className="w-4 h-4" />
+                    Continue with Google
+                </button>
 
                 <p className="text-center text-sm mt-10 text-white/40">
-                    Don't have an account?{" "}
+                    Don&apos;t have an account?{" "}
                     <Link href="/auth/signup" className="text-primary font-bold hover:underline">
                         Sign up
                     </Link>

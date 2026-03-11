@@ -1,216 +1,280 @@
-import { searchArtistMBAction, getTrendingSongsAction } from '@/app/actions';
-import { fetchArtistTopTracks, fetchArtistInfo, extractLastFmImage } from '@/lib/lastfm';
-import { batchResolveTrackImages, batchResolveArtistImages, resolveArtistImage } from '@/lib/imageResolver';
-import { ArtistCard } from '@/components/ui/ArtistCard';
-import { SongCard } from '@/components/ui/SongCard';
-import { DiscographySearch } from '@/components/ui/DiscographySearch';
-import { Search, TrendingUp, Users, Music2, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
+"use client";
 
-export default async function SearchPage({
-    searchParams,
-}: {
-    searchParams: Promise<{ q?: string }>;
-}) {
-    const { q: query = '' } = await searchParams;
+import Link from "next/link";
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Search, Loader2, Music2, Users, Disc3, ListMusic } from "lucide-react";
+import { motion } from "framer-motion";
+import { TrackRow } from "@/components/ui/TrackRow";
+import { type YouTubeTrack } from "@/store/youtubePlayer";
 
-    const [artists, topSongsFallback] = await Promise.all([
-        query ? searchArtistMBAction(query) : Promise.resolve(null),
-        !query ? getTrendingSongsAction(10) : Promise.resolve(null)
-    ]);
+type SearchTab = "songs" | "videos" | "artists" | "albums" | "playlists";
 
-    // Enrich artist results with batch resolver
-    let enrichedArtists: any[] | null = null;
-    if (artists && (artists as any[]).length > 0) {
-        const sliced = (artists as any[]).slice(0, 12);
-        const prepared = sliced.map((a: any) => ({ name: a.name, image: undefined }));
-        const images = await batchResolveArtistImages(prepared, 6);
-        enrichedArtists = sliced.map((a: any, i: number) => ({ ...a, image: images[i] }));
-    }
+interface SearchResults {
+    tracks: YouTubeTrack[];
+    artists: Array<{ id: string; name: string; thumbnail: string; subscribers?: string }>;
+    albums: Array<{ id: string; title: string; artist: string; thumbnail: string; year?: string }>;
+    playlists: Array<{ id: string; title: string; author: string; thumbnail: string; trackCount?: number }>;
+}
 
-    // Enrich trending songs with batch resolver
-    let enrichedSongs: any[] | null = null;
-    if (topSongsFallback && (topSongsFallback as any[]).length > 0) {
-        const songList = (topSongsFallback as any[]).slice(0, 10);
-        const prepared = songList.map((s: any) => ({ name: s.name, artist: s.artist?.name || 'Unknown', image: s.image }));
-        const images = await batchResolveTrackImages(prepared, 6);
-        enrichedSongs = songList.map((song: any, i: number) => ({
-            id: encodeURIComponent(song.name), title: song.name,
-            artist: song.artist?.name || 'Unknown', coverArt: images[i],
-            playCount: parseInt(song.playcount) || 0, listeners: parseInt(song.listeners) || 0, rank: i + 1,
-        }));
-    }
+export default function SearchPage() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const initialQuery = searchParams.get("q") || "";
 
-    // Artist discography
-    let discographyTracks: any[] = [];
-    let artistInfo: any = null;
-    let artistImage: string | null = null;
-    const topArtistName = enrichedArtists?.[0]?.name ?? null;
+    const [query, setQuery] = useState(initialQuery);
+    const [results, setResults] = useState<SearchResults>({ tracks: [], artists: [], albums: [], playlists: [] });
+    const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<SearchTab>("songs");
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [hasSearched, setHasSearched] = useState(false);
 
-    if (query && enrichedArtists && enrichedArtists.length > 0) {
-        const topArtist = enrichedArtists[0];
-        const [rawTracks, info] = await Promise.all([
-            fetchArtistTopTracks(topArtist.name, 50),
-            fetchArtistInfo(topArtist.name),
-        ]);
-        artistInfo = info;
-        artistImage = topArtist.image || extractLastFmImage(info?.image, 'extralarge');
-        if (!artistImage) {
-            artistImage = await resolveArtistImage(topArtist.name);
-        }
+    const tabs: { key: SearchTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+        { key: "songs", label: "Songs", icon: Music2 },
+        { key: "videos", label: "Videos", icon: Disc3 },
+        { key: "artists", label: "Artists", icon: Users },
+        { key: "albums", label: "Albums", icon: Disc3 },
+        { key: "playlists", label: "Playlists", icon: ListMusic },
+    ];
 
-        // Batch resolve discography images
-        const discPrepared = rawTracks.map((t: any) => ({ name: t.name, artist: topArtist.name, image: t.image }));
-        const discImages = await batchResolveTrackImages(discPrepared, 10);
-
-        // Get years from iTunes in a batch (limited concurrency)
-        const years: (string | null)[] = new Array(rawTracks.length).fill(null);
-        let yearIdx = 0;
-        async function yearWorker() {
-            while (yearIdx < rawTracks.length) {
-                const i = yearIdx++;
-                try {
-                    const itRes = await fetch(
-                        `https://itunes.apple.com/search?term=${encodeURIComponent(`${rawTracks[i].name} ${topArtist.name}`)}&entity=song&limit=1`,
-                        { next: { revalidate: 86400 } }
-                    );
-                    const itData = await itRes.json();
-                    if (itData.results?.[0]?.releaseDate) {
-                        years[i] = new Date(itData.results[0].releaseDate).getFullYear().toString();
-                    }
-                } catch { }
+    const doSearch = useCallback(async (q: string, tab?: SearchTab) => {
+        if (!q.trim()) return;
+        setLoading(true);
+        setHasSearched(true);
+        setShowSuggestions(false);
+        try {
+            const type = tab || activeTab;
+            const apiType = type === "songs" ? "songs" : type;
+            const res = await fetch(`/api/youtube-search?q=${encodeURIComponent(q)}&type=${apiType}`);
+            const data = await res.json();
+            if (data.success && data.data) {
+                setResults({
+                    tracks: data.data.tracks ?? [],
+                    artists: (data.data.artists ?? []).map((artist: { artistId: string; name: string; thumbnail: string; subscribers?: string }) => ({
+                        id: artist.artistId,
+                        name: artist.name,
+                        thumbnail: artist.thumbnail,
+                        subscribers: artist.subscribers,
+                    })),
+                    albums: (data.data.albums ?? []).map((album: { albumId: string; title: string; artist: string; thumbnail: string; year?: string }) => ({
+                        id: album.albumId,
+                        title: album.title,
+                        artist: album.artist,
+                        thumbnail: album.thumbnail,
+                        year: album.year,
+                    })),
+                    playlists: (data.data.playlists ?? []).map((playlist: { playlistId: string; title: string; author?: string; thumbnail: string; trackCount?: number }) => ({
+                        id: playlist.playlistId,
+                        title: playlist.title,
+                        author: playlist.author ?? 'Unknown',
+                        thumbnail: playlist.thumbnail,
+                        trackCount: playlist.trackCount,
+                    })),
+                });
             }
+        } catch (err) {
+            console.error("[Search] Error:", err);
+        } finally {
+            setLoading(false);
         }
-        await Promise.all(Array.from({ length: Math.min(8, rawTracks.length) }, () => yearWorker()));
+    }, [activeTab]);
 
-        discographyTracks = rawTracks.map((track: any, i: number) => ({
-            id: encodeURIComponent(track.name),
-            title: track.name,
-            artist: topArtist.name,
-            coverArt: discImages[i],
-            listeners: parseInt(track.listeners) || 0,
-            year: years[i],
-            rank: i + 1,
-        }));
-    }
+    // Search on initial query
+    useEffect(() => {
+        if (initialQuery) {
+            setQuery(initialQuery);
+            doSearch(initialQuery);
+        }
+    }, [initialQuery, doSearch]);
 
-    // Short bio
-    const bio = artistInfo?.bio?.summary
-        ?.replace(/<[^>]+>/g, '')
-        ?.split('\n')[0]
-        ?.trim()
-        ?.slice(0, 300);
+    // Fetch suggestions as user types
+    useEffect(() => {
+        if (query.length < 2) {
+            setSuggestions([]);
+            return;
+        }
+        const timer = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/youtube-music/suggestions?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    setSuggestions(data.data.slice(0, 6));
+                }
+            } catch { /* ignore */ }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (query.trim()) {
+            router.push(`/search?q=${encodeURIComponent(query)}`);
+            doSearch(query);
+        }
+    };
+
+    const handleTabChange = (tab: SearchTab) => {
+        setActiveTab(tab);
+        if (query.trim()) {
+            doSearch(query, tab);
+        }
+    };
 
     return (
-        <div className="w-full min-h-screen pb-24 pt-24 px-4 md:px-8 max-w-7xl mx-auto relative">
-            {/* Ambient gradient background */}
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                {query && (
-                    <>
-                        <div className="absolute top-[10%] right-[5%] w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[120px]" />
-                        <div className="absolute bottom-[20%] left-[5%] w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px]" />
-                    </>
-                )}
-            </div>
+        <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.4 }}
+            className="px-6 py-6"
+        >
+            {/* Search bar */}
+            <div className="relative max-w-2xl mb-8">
+                <form onSubmit={handleSearch}>
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+                        <input
+                            type="text"
+                            value={query}
+                            onChange={(e) => { setQuery(e.target.value); setShowSuggestions(true); }}
+                            onFocus={() => setShowSuggestions(true)}
+                            placeholder="Search songs, artists, albums..."
+                            className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/[0.06] border border-white/[0.06] text-white text-sm placeholder:text-white/25 outline-none focus:border-white/15 focus:bg-white/[0.08] transition-all"
+                        />
+                        {loading && <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-primary" />}
+                    </div>
+                </form>
 
-            <div className="relative z-10">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-2">
-                        {query ? (
-                            <>Results for <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">&quot;{query}&quot;</span></>
-                        ) : 'Discover Music'}
-                    </h1>
-                    <p className="text-muted-foreground">
-                        {query ? 'Click an artist to see their full profile.' : 'Search for any artist to explore their music.'}
-                    </p>
-                </div>
-
-                {/* Artist Results */}
-                {query && enrichedArtists && enrichedArtists.length > 0 && (
-                    <section className="mb-12 animate-fade-up">
-                        <div className="flex items-center gap-3 mb-5">
-                            <div className="w-1 h-7 rounded-full bg-gradient-to-b from-cyan-400 to-blue-500" />
-                            <Users className="w-5 h-5 text-cyan-400" />
-                            <h2 className="text-xl font-bold tracking-tight">Artists</h2>
-                            <span className="text-xs text-muted-foreground ml-2">{enrichedArtists.length} found</span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                            {enrichedArtists.map((artist: any) => (
-                                <ArtistCard key={artist.id} id={artist.name} name={artist.name} image={artist.image} />
-                            ))}
-                        </div>
-                    </section>
-                )}
-
-                {/* Artist Profile + Discography */}
-                {query && topArtistName && discographyTracks.length > 0 && (
-                    <section className="mb-12 animate-fade-up">
-                        <div className="rounded-2xl p-6 mb-8 flex gap-6 items-center border border-white/5 bg-gradient-to-r from-purple-500/10 via-card to-blue-500/10">
-                            <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-purple-400/30 shrink-0 bg-card">
-                                {artistImage ? (
-                                    <img src={artistImage} alt={topArtistName} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-3xl font-black text-purple-400">
-                                        {topArtistName[0]}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold uppercase tracking-widest text-purple-400 mb-1">Top Match</p>
-                                <h2 className="text-2xl font-black text-white truncate">{topArtistName}</h2>
-                                {artistInfo?.stats && (
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        <span className="text-purple-400 font-semibold">{parseInt(artistInfo.stats.listeners).toLocaleString()}</span> listeners
-                                        {' · '}
-                                        <span className="text-blue-400 font-semibold">{parseInt(artistInfo.stats.playcount).toLocaleString()}</span> plays
-                                    </p>
-                                )}
-                                {bio && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{bio}</p>}
-                            </div>
-                            <Link
-                                href={`/artist/${encodeURIComponent(topArtistName)}`}
-                                className="shrink-0 flex items-center gap-2 px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-full text-sm font-semibold transition-colors border border-purple-500/20"
+                {/* Suggestions dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 rounded-xl bg-[#1a1a1a] border border-white/[0.06] shadow-xl z-20 overflow-hidden">
+                        {suggestions.map((sug, i) => (
+                            <button
+                                key={i}
+                                onClick={() => {
+                                    setQuery(sug);
+                                    setShowSuggestions(false);
+                                    router.push(`/search?q=${encodeURIComponent(sug)}`);
+                                    doSearch(sug);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.05] transition-colors text-left text-sm text-white/70 hover:text-white"
                             >
-                                Full Profile <ExternalLink className="w-3.5 h-3.5" />
-                            </Link>
-                        </div>
-
-                        <div className="flex items-center gap-3 mb-5">
-                            <div className="w-1 h-7 rounded-full bg-gradient-to-b from-pink-400 to-rose-600" />
-                            <Music2 className="w-5 h-5 text-pink-400" />
-                            <h2 className="text-xl font-bold tracking-tight">All Songs by {topArtistName}</h2>
-                            <span className="text-xs text-muted-foreground ml-2">{discographyTracks.length} tracks</span>
-                        </div>
-
-                        <DiscographySearch tracks={discographyTracks} artistName={topArtistName} />
-                    </section>
-                )}
-
-                {/* No Results */}
-                {query && (!enrichedArtists || enrichedArtists.length === 0) && (
-                    <div className="py-20 text-center flex flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-card via-card to-purple-500/5 border border-white/5">
-                        <Search className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                        <h3 className="text-xl font-bold text-white mb-2">No results for &quot;{query}&quot;</h3>
-                        <p className="text-muted-foreground">Try adjusting your search terms.</p>
+                                <Search className="h-4 w-4 text-white/20 flex-shrink-0" />
+                                {sug}
+                            </button>
+                        ))}
                     </div>
                 )}
+            </div>
 
-                {/* Trending Fallback */}
-                {!query && enrichedSongs && (
-                    <section>
-                        <div className="flex items-center gap-3 mb-5">
-                            <div className="w-1 h-7 rounded-full bg-gradient-to-b from-rose-400 to-amber-500" />
-                            <TrendingUp className="w-5 h-5 text-rose-400" />
-                            <h2 className="text-xl font-bold tracking-tight">Trending Right Now</h2>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            {enrichedSongs.map((song) => (
-                                <SongCard key={song.id + song.rank} id={song.id} title={song.title} artist={song.artist} coverArt={song.coverArt} playCount={song.playCount} listeners={song.listeners} rank={song.rank} />
+            {/* Click outside to close suggestions */}
+            {showSuggestions && <div className="fixed inset-0 z-10" onClick={() => setShowSuggestions(false)} />}
+
+            {/* Tabs */}
+            {hasSearched && (
+                <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide">
+                    {tabs.map(({ key, label, icon: Icon }) => (
+                        <button
+                            key={key}
+                            onClick={() => handleTabChange(key)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all flex-shrink-0 ${activeTab === key
+                                ? "bg-white text-black"
+                                : "bg-white/[0.06] text-white/50 hover:text-white hover:bg-white/[0.1]"
+                                }`}
+                        >
+                            <Icon className="h-4 w-4" />
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Results */}
+            {loading ? (
+                <div className="py-20 flex justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            ) : hasSearched ? (
+                <div>
+                    {/* Songs/Videos tab */}
+                    {(activeTab === "songs" || activeTab === "videos") && results.tracks.length > 0 && (
+                        <div className="space-y-0.5">
+                            {results.tracks.map((track, i) => (
+                                <TrackRow key={`${track.videoId}-${i}`} track={track} index={i} showIndex />
                             ))}
                         </div>
-                    </section>
-                )}
-            </div>
-        </div>
+                    )}
+
+                    {/* Artists tab */}
+                    {activeTab === "artists" && results.artists.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                            {results.artists.map((artist) => (
+                                <Link key={artist.id} href={`/artist/${encodeURIComponent(artist.name)}`} className="flex flex-col items-center gap-3 group">
+                                    <div className="relative w-32 h-32 rounded-full overflow-hidden bg-[#1a1a1a] shadow-lg group-hover:shadow-xl transition-shadow">
+                                        {artist.thumbnail && (
+                                            <Image src={artist.thumbnail} alt={artist.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                                        )}
+                                    </div>
+                                    <p className="text-sm font-medium text-white text-center truncate max-w-[120px]">{artist.name}</p>
+                                    {artist.subscribers && <p className="text-xs text-white/30">{artist.subscribers}</p>}
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Albums tab */}
+                    {activeTab === "albums" && results.albums.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {results.albums.map((album) => (
+                                <Link key={album.id} href={`/album/${album.id}`} className="group text-left">
+                                    <div className="relative aspect-square rounded-xl overflow-hidden bg-[#1a1a1a] mb-3 shadow-lg group-hover:shadow-xl transition-shadow">
+                                        {album.thumbnail && (
+                                            <Image src={album.thumbnail} alt={album.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                                        )}
+                                    </div>
+                                    <p className="text-sm font-medium text-white truncate">{album.title}</p>
+                                    <p className="text-xs text-white/40 truncate">{album.artist}{album.year ? ` · ${album.year}` : ''}</p>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Playlists tab */}
+                    {activeTab === "playlists" && results.playlists.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {results.playlists.map((pl) => (
+                                <Link key={pl.id} href={`/playlist/${pl.id}`} className="group text-left">
+                                    <div className="relative aspect-square rounded-xl overflow-hidden bg-[#1a1a1a] mb-3 shadow-lg group-hover:shadow-xl transition-shadow">
+                                        {pl.thumbnail && (
+                                            <Image src={pl.thumbnail} alt={pl.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                                        )}
+                                    </div>
+                                    <p className="text-sm font-medium text-white truncate">{pl.title}</p>
+                                    <p className="text-xs text-white/40 truncate">{pl.author}{pl.trackCount ? ` · ${pl.trackCount} songs` : ''}</p>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* No results */}
+                    {results.tracks.length === 0 && results.artists.length === 0 && results.albums.length === 0 && results.playlists.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-20">
+                            <Music2 className="h-12 w-12 text-white/10 mb-4" />
+                            <p className="text-lg font-semibold text-white/30">No results found</p>
+                            <p className="text-sm text-white/20 mt-1">Try a different search term</p>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                /* Initial state */
+                <div className="flex flex-col items-center justify-center py-20">
+                    <Search className="h-16 w-16 text-white/10 mb-4" />
+                    <p className="text-lg font-semibold text-white/30">Search YouTube Music</p>
+                    <p className="text-sm text-white/20 mt-1">Find songs, artists, albums, and playlists</p>
+                </div>
+            )}
+        </motion.div>
     );
 }

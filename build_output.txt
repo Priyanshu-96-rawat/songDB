@@ -1,0 +1,50 @@
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 11.2s
+  Running TypeScript ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/27) ...
+  Generating static pages using 7 workers (6/27) 
+  Generating static pages using 7 workers (13/27) 
+  Generating static pages using 7 workers (20/27) 
+Γ£ô Generating static pages using 7 workers (27/27) in 3.1s
+  Finalizing page optimization ...
+
+Route (app)                         Revalidate  Expire
+Γöî Γùï /                                      15m      1y
+Γö£ Γùï /_not-found
+Γö£ ╞Æ /album/[id]
+Γö£ ╞Æ /api/youtube-music/album
+Γö£ ╞Æ /api/youtube-music/artist
+Γö£ ╞Æ /api/youtube-music/explore
+Γö£ ╞Æ /api/youtube-music/home
+Γö£ ╞Æ /api/youtube-music/lyrics
+Γö£ ╞Æ /api/youtube-music/playlist
+Γö£ ╞Æ /api/youtube-music/related
+Γö£ ╞Æ /api/youtube-music/suggestions
+Γö£ ╞Æ /api/youtube-music/up-next
+Γö£ ╞Æ /api/youtube-search
+Γö£ ╞Æ /api/youtube-stream
+Γö£ ╞Æ /artist/[id]
+Γö£ Γùï /auth/login
+Γö£ Γùï /auth/signup
+Γö£ Γùï /discover                              12h      1y
+Γö£ Γùï /download
+Γö£ Γùï /explore                               15m      1y
+Γö£ ╞Æ /genres
+Γö£ ╞Æ /genres/[genre]
+Γö£ Γùï /library
+Γö£ ╞Æ /playlist/[id]
+Γö£ Γùï /profile
+Γö£ Γùï /search
+Γö£ ╞Æ /song/[id]
+Γö£ Γùï /top-artists                            1d      1y
+Γö£ ╞Æ /top-rated
+Γöö Γùï /trending                              12h      1y
+
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+

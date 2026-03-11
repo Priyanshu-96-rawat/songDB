@@ -1,8 +1,10 @@
+
 import { fetchTrendingSongs, type LastFmImageEntry } from '@/lib/lastfm';
 import { batchResolveTrackImages } from '@/lib/imageResolver';
 import { getGradientClass } from '@/lib/colors';
 import { TrendingUp, ArrowLeft, Youtube } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 /** Last.fm chart.gettoptracks track shape */
 type RawChartTrack = {
@@ -80,9 +82,9 @@ export default async function TrendingPage() {
                             {track.rank}
                         </span>
                         <Link href={`/song/${track.id}`} className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
+                            <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0 relative">
                                 {track.coverArt ? (
-                                    <img src={track.coverArt} alt="" className="w-full h-full object-cover" />
+                                    <Image src={track.coverArt} alt="" fill className="object-cover" unoptimized />
                                 ) : (
                                     <div className={`w-full h-full bg-gradient-to-br ${getGradientClass(track.title)} flex items-center justify-center`}>
                                         <span className="text-xs font-bold text-white/40">{track.title?.charAt(0)?.toUpperCase()}</span>
@@ -100,7 +102,7 @@ export default async function TrendingPage() {
                             href={ytUrl(track.title, track.artist)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                             title="Play on YouTube"
                         >
                             <Youtube className="w-4 h-4" />

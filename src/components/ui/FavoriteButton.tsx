@@ -81,6 +81,11 @@ export function FavoriteButton({
         md: "w-5 h-5",
         lg: "w-6 h-6",
     };
+    const favoritedStyle = {
+        backgroundColor: "color-mix(in srgb, var(--color-primary) 18%, transparent)",
+        color: "var(--color-primary)",
+        borderColor: "color-mix(in srgb, var(--color-primary) 28%, transparent)",
+    };
 
     return (
         <button
@@ -89,16 +94,17 @@ export function FavoriteButton({
             title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             className={`${sizeClasses[size]} rounded-full flex items-center justify-center transition-all duration-200
                 ${isFavorited
-                    ? "bg-red-500/20 text-red-500 hover:bg-red-500/30 ring-1 ring-red-500/30"
+                    ? "ring-1 hover:brightness-110"
                     : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70 ring-1 ring-white/10"
                 }
                 ${isPending ? "opacity-50" : "hover:scale-110"}
                 disabled:cursor-not-allowed`}
+            style={isFavorited ? favoritedStyle : undefined}
         >
             {isPending ? (
                 <Loader2 className={`${iconSizes[size]} animate-spin`} />
             ) : (
-                <Heart className={`${iconSizes[size]} transition-all ${isFavorited ? "fill-red-500" : ""}`} />
+                <Heart className={`${iconSizes[size]} transition-all ${isFavorited ? "fill-current" : ""}`} />
             )}
         </button>
     );

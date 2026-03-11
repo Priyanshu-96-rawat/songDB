@@ -1,3 +1,4 @@
+import 'server-only';
 const API_KEY = process.env.LASTFM_API_KEY;
 const BASE_URL = "https://ws.audioscrobbler.com/2.0/";
 

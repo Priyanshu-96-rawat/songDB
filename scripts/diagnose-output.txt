@@ -1,0 +1,76 @@
+Creating Innertube client...
+Client created OK
+
+=== REGULAR SEARCH: "Shape of You Ed Sheeran" ===
+Search keys: [
+  'header',
+  'results',
+  'refinements',
+  'estimated_results',
+  'sub_menu',
+  'watch_card',
+  'refinement_cards'
+]
+results array? true
+results length: 19
+First result type: Video
+First result keys: [
+  'type',
+  'video_id',
+  'title',
+  'untranslated_title',
+  'description_snippet',
+  'snippets',
+  'expandable_metadata',
+  'additional_metadatas',
+  'thumbnails',
+  'thumbnail_overlays',
+  'rich_thumbnail',
+  'author',
+  'badges',
+  'endpoint',
+  'published'
+]
+id: JGwWNGJdvx8
+title: Ed Sheeran - Shape of You (Official Music Video)
+author: Ed Sheeran
+duration text: 4:24
+duration seconds: 264
+thumbnail: https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg?sqp=-oaymwEcCOADEI4CSFXyq4qpAw4IARUAAIhCGAFwAcABBg=
+
+Second result:
+id: liTfD88dbCo title: Ed Sheeran - Shape of You (Lyrics) author: 7clouds
+
+=== MUSIC SEARCH: "Shape of You" ===
+Music search keys: [ 'header', 'contents' ]
+  .contents: type=object, isArray=true, length=2
+  .header: type=object, isArray=false, length=N/A
+  .page: type=object, isArray=false, length=N/A
+Contents[0] keys: [
+  'type',
+  'thumbnail',
+  'title',
+  'subtitle',
+  'buttons',
+  'menu',
+  'on_tap',
+  'header',
+  'end_icon_type',
+  'subtitle_badges',
+  'thumbnail_overlay',
+  'contents'
+]
+Contents[0] id: undefined
+Contents[0] title: Shape of You
+
+=== SUGGESTIONS: "shape" ===
+Type: object isArray: true length: 14
+First 5: [
+  'shape of you',
+  'shapes song',
+  'shaper origin',
+  'shapes',
+  'shape of my heart'
+]
+
+=== DONE ===

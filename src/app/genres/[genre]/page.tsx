@@ -124,7 +124,7 @@ export default async function GenrePage({ params }: { params: Promise<{ genre: s
                     <div>
                         <p className="font-bold text-white mb-1">Personal Tag</p>
                         <p className="text-muted-foreground text-sm">
-                            "{decodedGenre}" is a personal/social tag on Last.fm used to track concerts or favourites — it doesn't have a standard track listing.
+                            &quot;{decodedGenre}&quot; is a personal/social tag on Last.fm used to track concerts or favourites — it doesn&apos;t have a standard track listing.
                             Browse the artists below or try a music genre like <Link href="/genres/rock" className="text-primary hover:underline">Rock</Link> or <Link href="/genres/pop" className="text-primary hover:underline">Pop</Link>.
                         </p>
                     </div>

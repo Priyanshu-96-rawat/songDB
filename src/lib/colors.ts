@@ -14,7 +14,7 @@ const GRADIENT_CLASSES = [
     'from-teal-500 via-cyan-400 to-sky-500',
     'from-sky-500 via-blue-500 to-indigo-600',
     'from-fuchsia-600 via-purple-500 to-indigo-500',
-    'from-orange-500 via-red-500 to-rose-600',
+    'from-primary via-secondary to-accent',
     'from-lime-500 via-emerald-500 to-teal-600',
     'from-cyan-400 via-sky-500 to-blue-600',
     'from-purple-500 via-violet-500 to-fuchsia-500',
@@ -47,7 +47,7 @@ export function getGradientClass(name: string): string {
 export function getDynamicGradientStyle(name: string = '') {
     if (!name) {
         return {
-            background: 'linear-gradient(135deg, #1db954 0%, #0d4a2a 50%, #191414 100%)',
+            background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 50%, var(--color-card) 100%)',
         };
     }
 

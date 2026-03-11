@@ -65,6 +65,45 @@ All API responses map to the following schema:
 - **Output Data**: `{ review: Review }`
 - **Description**: Validates input via Zod. Adds a user review for a specific song in Firestore.
 
+### 7. Music Search `GET /api/music/search`
+- **Method**: GET
+- **Auth Level**: Public / Rate Limited
+- **Input Query**: `?q=QUERY`
+- **Output Data**: `{ tracks: YouTubeTrack[] }`
+- **Description**: Uses `youtubei.js` to search for tracks and returns video ID, title, thumbnails, duration, and artist name.
+
+### 8. Music Stream Metadata `GET /api/music/info`
+- **Method**: GET
+- **Auth Level**: Public / Rate Limited
+- **Input Query**: `?id=VIDEO_ID`
+- **Output Data**: `{ info: TrackMetadata }`
+- **Description**: Uses `youtubei.js` to get full metadata for a given video ID to supplement search context.
+
+### 9. Music Audio Stream Proxy `GET /api/youtube-stream`
+- **Method**: GET
+- **Auth Level**: Public / Rate Limited (High Bandwidth)
+- **Input Query**: `?id=VIDEO_ID`
+- **Output Data**: Binary Audio Stream / ArrayBuffer
+- **Description**: Resolves the highest-quality playable audio stream via `yt-dlp` metadata scoring, proxies the stream chunks to the frontend `HTMLAudioElement`, and exposes chosen codec/container/bitrate in response headers for debugging. Supports partial 206 responses.
+
+### 10. Synced Lyrics `GET /api/youtube-music/lyrics`
+- **Method**: GET
+- **Auth Level**: Public / Rate Limited
+- **Input Query**: `?id=VIDEO_ID&durationSeconds=OPTIONAL_TRACK_DURATION`
+- **Output Data**:
+  ```json
+  {
+    "text": "full lyrics text",
+    "lines": [
+      { "text": "line one", "startMs": 0, "endMs": 2400 }
+    ],
+    "synced": true,
+    "source": "captions",
+    "timingMode": "synced"
+  }
+  ```
+- **Description**: Returns caption-derived timed lyric lines when available. If only official plain lyrics exist, the API can derive lightweight estimated timings from the known track duration so the player can still advance lines progressively.
+
 ## Rate Limiting Targets
 - **Public GET feeds**: 60 req/min/IP
 - **Authenticated Reviews/Creates**: 20 req/min/User

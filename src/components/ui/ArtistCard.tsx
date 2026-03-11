@@ -14,7 +14,7 @@ interface ArtistCardProps {
     rank?: number;
 }
 
-export function ArtistCard({ id, name, image, listeners, rank }: ArtistCardProps) {
+export function ArtistCard({ name, image, listeners, rank }: ArtistCardProps) {
     const [imgError, setImgError] = useState(false);
     const displayImage = (!imgError && image) ? image : null;
 

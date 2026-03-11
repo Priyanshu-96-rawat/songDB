@@ -1,142 +1,128 @@
-import { getAlbumTracklistAction } from '@/app/actions';
-import Image from 'next/image';
-import Link from 'next/link';
-import { getGradientClass } from '@/lib/colors';
-import { Disc3, Clock, Youtube, Music } from 'lucide-react';
+"use client";
 
-function youtubeSearchUrl(track: string, artist: string) {
-    return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${track} ${artist} official`)}`;
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { Loader2, Play, Music2, Shuffle } from "lucide-react";
+import Image from "next/image";
+import { TrackRow } from "@/components/ui/TrackRow";
+import { useYouTubePlayerStore, type YouTubeTrack } from "@/store/youtubePlayer";
+
+interface AlbumData {
+    title: string;
+    artist: string;
+    thumbnail: string;
+    year: string;
+    trackCount: number;
+    tracks: YouTubeTrack[];
 }
 
-export default async function AlbumPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-    const album = await getAlbumTracklistAction(id);
+export default function AlbumPage() {
+    const params = useParams();
+    const albumId = params.id as string;
+    const [album, setAlbum] = useState<AlbumData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const { playTrack, addToQueue } = useYouTubePlayerStore();
 
-    if (!album) {
+    useEffect(() => {
+        async function fetchAlbum() {
+            setLoading(true);
+            try {
+                const res = await fetch(`/api/youtube-music/album?id=${encodeURIComponent(albumId)}`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    setAlbum(data.data);
+                }
+            } catch (err) {
+                console.error("[Album] Error:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        if (albumId) fetchAlbum();
+    }, [albumId]);
+
+    const playAll = () => {
+        if (!album || album.tracks.length === 0) return;
+        playTrack(album.tracks[0]);
+        album.tracks.slice(1).forEach((t) => addToQueue(t));
+    };
+
+    const shuffleAll = () => {
+        if (!album || album.tracks.length === 0) return;
+        const shuffled = [...album.tracks].sort(() => Math.random() - 0.5);
+        playTrack(shuffled[0]);
+        shuffled.slice(1).forEach((t) => addToQueue(t));
+    };
+
+    if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <Disc3 className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
-                    <h1 className="text-2xl font-bold mb-2">Album Not Found</h1>
-                    <p className="text-muted-foreground">We couldn't find this album.</p>
-                    <Link href="/" className="inline-block mt-6 px-6 py-3 bg-primary text-primary-foreground rounded-full font-medium hover:scale-105 transition-transform">
-                        Go Home
-                    </Link>
-                </div>
+            <div className="flex flex-col items-center justify-center h-[60vh]">
+                <Loader2 className="mb-4 h-10 w-10 animate-spin text-primary" />
             </div>
         );
     }
 
-    const totalDuration = album.tracks?.reduce((acc: number, track: any) =>
-        acc + (parseInt(track.duration || "0", 10)), 0
-    ) || 0;
-
-    const formatTime = (ms: number) => {
-        const minutes = Math.floor(ms / 60000);
-        const seconds = ((ms % 60000) / 1000).toFixed(0);
-        return `${minutes}:${Number(seconds) < 10 ? '0' : ''}${seconds}`;
-    };
+    if (!album) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh]">
+                <Music2 className="h-12 w-12 text-white/10 mb-4" />
+                <p className="text-white/30">Album not found</p>
+            </div>
+        );
+    }
 
     return (
-        <div className="w-full min-h-screen pb-24">
-            {/* ── Hero ── */}
-            <section className="relative w-full h-[45vh] min-h-[360px] flex items-end overflow-hidden">
-                <div className="absolute inset-0 bg-background z-[1]" />
-                {album.image && (
-                    <img
-                        src={album.image}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover opacity-30 blur-2xl scale-110 z-[2]"
+        <div className="pb-8">
+            {/* Hero */}
+            <div className="relative h-80 overflow-hidden">
+                <div className="absolute inset-0">
+                    <Image 
+                        src={album.thumbnail} 
+                        alt={album.title} 
+                        fill
+                        className="object-cover blur-3xl opacity-30 scale-110" 
+                        priority
                     />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent z-[3]" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0f0f0f]" />
 
-                <div className="container relative z-10 pb-12 flex gap-8 items-end">
-                    <div className="hidden md:block w-48 h-48 lg:w-56 lg:h-56 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/10 shrink-0">
-                        {album.image ? (
-                            <img src={album.image} alt={album.name} className="w-full h-full object-cover" />
-                        ) : (
-                            <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${getGradientClass(album.name)}`}>
-                                <Disc3 className="w-16 h-16 text-white/30" />
-                            </div>
-                        )}
+                <div className="relative z-10 flex items-end gap-6 px-8 pb-8 h-full">
+                    <div className="relative h-48 w-48 flex-shrink-0 overflow-hidden rounded-xl shadow-2xl">
+                        <Image 
+                            src={album.thumbnail} 
+                            alt={album.title} 
+                            fill
+                            className="object-cover" 
+                        />
                     </div>
-
-                    <div className="flex-1">
-                        <span className="inline-block py-1 px-3 rounded-full bg-primary/15 text-primary text-[11px] font-bold uppercase tracking-[0.15em] border border-primary/20 mb-3">
-                            Album
-                        </span>
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[0.95] mb-3">
-                            {album.name}
-                        </h1>
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                            <Link
-                                href={`/artist/${encodeURIComponent(album.artist)}`}
-                                className="font-bold text-foreground hover:text-primary transition-colors"
-                            >
-                                {album.artist}
-                            </Link>
-                            {album.year && (
-                                <>
-                                    <span className="text-white/20">•</span>
-                                    <span>{album.year}</span>
-                                </>
-                            )}
-                            {album.tracks && (
-                                <>
-                                    <span className="text-white/20">•</span>
-                                    <span>{album.tracks.length} tracks</span>
-                                </>
-                            )}
-                        </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-white/40">Album</p>
+                        <h1 className="truncate text-3xl font-bold text-white md:text-4xl">{album.title}</h1>
+                        <p className="mt-2 text-white/50">{album.artist} · {album.year} · {album.trackCount} songs</p>
                     </div>
                 </div>
-            </section>
+            </div>
 
-            {/* ── Tracklist ── */}
-            <div className="container mt-8 max-w-4xl">
-                <div className="bg-card/50 rounded-xl border border-white/5 overflow-hidden">
-                    {/* Header */}
-                    <div className="grid grid-cols-[32px_1fr_40px_40px] gap-3 px-4 py-3 border-b border-white/5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                        <span className="text-right">#</span>
-                        <span>Title</span>
-                        <span><Clock className="w-3.5 h-3.5" /></span>
-                        <span></span>
-                    </div>
+            {/* Actions */}
+            <div className="flex items-center gap-3 px-8 py-6">
+                <button
+                    onClick={playAll}
+                    className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90"
+                >
+                    <Play className="h-5 w-5 fill-current" />
+                    Play
+                </button>
+                <button onClick={shuffleAll} className="flex items-center gap-2 rounded-full bg-white/[0.06] px-6 py-3 font-semibold text-white transition hover:bg-white/[0.1]">
+                    <Shuffle className="h-5 w-5" />
+                    Shuffle
+                </button>
+            </div>
 
-                    {album.tracks && album.tracks.length > 0 ? (
-                        <div className="flex flex-col">
-                            {album.tracks.map((track: any, idx: number) => (
-                                <div key={idx} className="grid grid-cols-[32px_1fr_40px_40px] gap-3 px-4 py-3 items-center border-b border-white/[0.03] last:border-0 hover:bg-white/[0.03] transition-colors group">
-                                    <span className="text-right text-sm font-bold text-muted-foreground group-hover:text-primary transition-colors tabular-nums">
-                                        {idx + 1}
-                                    </span>
-                                    <div className="min-w-0">
-                                        <span className="text-sm font-semibold text-foreground truncate block group-hover:text-primary transition-colors">
-                                            {track.name}
-                                        </span>
-                                    </div>
-                                    <span className="text-xs text-muted-foreground font-mono">
-                                        {track.duration ? formatTime(parseInt(track.duration, 10)) : '--:--'}
-                                    </span>
-                                    <a
-                                        href={youtubeSearchUrl(track.name, album.artist)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-1 rounded-full text-muted-foreground hover:text-red-500 transition-colors"
-                                        title="Play on YouTube"
-                                    >
-                                        <Youtube className="w-4 h-4" />
-                                    </a>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="p-8 text-center text-muted-foreground">
-                            No tracklist available for this album.
-                        </div>
-                    )}
-                </div>
+            {/* Track list */}
+            <div className="px-6">
+                {album.tracks.map((track, i) => (
+                    <TrackRow key={`${track.videoId}-${i}`} track={track} index={i} showIndex />
+                ))}
             </div>
         </div>
     );

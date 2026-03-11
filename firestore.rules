@@ -55,5 +55,21 @@ service cloud.firestore {
       allow update, delete: if request.auth != null
         && resource.data.user_id == request.auth.uid;
     }
+
+    // ─── Favorites ───
+    match /favorites/{favoriteId} {
+      allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
+
+      allow create: if request.auth != null
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.item_id is string
+        && request.resource.data.item_id.size() > 0
+        && request.resource.data.item_type in ['song', 'artist']
+        && request.resource.data.item_name is string
+        && request.resource.data.created_at is string;
+
+      allow update, delete: if request.auth != null
+        && resource.data.user_id == request.auth.uid;
+    }
   }
 }

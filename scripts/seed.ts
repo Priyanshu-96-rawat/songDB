@@ -311,7 +311,7 @@ async function seedDatabase() {
             deleted_at: null
         };
 
-        const userRef = await db.collection('users').doc('test-user-001').set(testUser);
+        await db.collection('users').doc('test-user-001').set(testUser);
         console.log(`  ✓ User: ${testUser.username} → test-user-001`);
         console.log(`\n📦 Seeded 1 user.\n`);
 

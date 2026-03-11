@@ -13,7 +13,7 @@ interface AlbumCardProps {
     playCount?: number | string;
 }
 
-export function AlbumCard({ id, title, artist, coverArt, year, playCount }: AlbumCardProps) {
+export function AlbumCard({ id, title, artist, coverArt, year }: AlbumCardProps) {
     const [imgError, setImgError] = useState(false);
     const displayImage = (!imgError && coverArt) ? coverArt : null;
 

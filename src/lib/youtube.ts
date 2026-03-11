@@ -1,3 +1,4 @@
+import 'server-only';
 // We don't have a specific API key for YouTube in the prompt, so I will add a placeholder or use an alternative if needed.
 // YouTube Data API v3 requires an API key. 
 export async function fetchYouTubeEmbed(query: string) {

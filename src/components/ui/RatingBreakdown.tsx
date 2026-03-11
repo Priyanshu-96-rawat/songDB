@@ -14,7 +14,6 @@ export function RatingBreakdown({ songId }: RatingBreakdownProps) {
 
     useEffect(() => {
         let cancelled = false;
-        setLoading(true);
         getRatingBreakdownAction(songId)
             .then((result) => {
                 if (!cancelled) setData(result);

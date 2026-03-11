@@ -1,0 +1,21 @@
+
+> songdb@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.100.143.140:3000
+- Environments: .env.local
+
+✓ Starting...
+Creating turbopack project {
+  dir: 'C:\\Users\\Priyanshu\\.gemini\\antigravity\\scratch\\songdb',
+  testMode: true
+}
+✓ Ready in 1604ms
+○ Compiling / ...
+ GET / 200 in 5.5s (compile: 5.0s, render: 507ms)
+ GET / 200 in 217ms (compile: 11ms, render: 206ms)
+ GET /api/youtube-music/explore 200 in 4.4s (compile: 513ms, render: 3.9s)
+ GET /api/youtube-music/home 200 in 4.6s (compile: 430ms, render: 4.2s)
+Terminate batch job (Y/N)? 

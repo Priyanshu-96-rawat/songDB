@@ -1,26 +1,41 @@
-import { Loader2 } from "lucide-react";
-
 export default function Loading() {
     return (
-        <div className="fixed inset-0 min-h-screen bg-zinc-950 flex flex-col items-center justify-center z-50">
-            <div className="relative flex flex-col items-center justify-center">
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full w-32 h-32 animate-pulse" />
+        <div className="fixed inset-0 min-h-screen bg-black flex flex-col items-center justify-center z-50">
+            {/* Ambient glow */}
+            <div
+                className="absolute h-48 w-48 animate-pulse rounded-full blur-[80px]"
+                style={{ backgroundColor: "color-mix(in srgb, var(--color-primary) 10%, transparent)" }}
+            />
 
-                {/* Animated 3D-like Icon container */}
-                <div className="relative z-10 p-6 rounded-2xl bg-zinc-900/50 border border-zinc-800 backdrop-blur-sm shadow-2xl flex items-center justify-center animate-in fade-in duration-500 zoom-in-95">
-                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" />
+            <div className="relative flex flex-col items-center gap-6">
+                {/* Logo */}
+                <div
+                    className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-secondary to-accent"
+                    style={{ boxShadow: "0 0 40px color-mix(in srgb, var(--color-primary) 25%, transparent)" }}
+                >
+                    <svg width="28" height="28" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect className="splash-bar" x="4" y="16" width="4" height="8" rx="2" fill="white" style={{ animationDelay: '0ms' }} />
+                        <rect className="splash-bar" x="11" y="10" width="4" height="20" rx="2" fill="white" style={{ animationDelay: '120ms' }} />
+                        <rect className="splash-bar" x="18" y="6" width="4" height="28" rx="2" fill="white" style={{ animationDelay: '240ms' }} />
+                        <rect className="splash-bar" x="25" y="12" width="4" height="16" rx="2" fill="white" style={{ animationDelay: '360ms' }} />
+                        <rect className="splash-bar" x="32" y="14" width="4" height="12" rx="2" fill="white" style={{ animationDelay: '480ms' }} />
+                    </svg>
                 </div>
 
-                {/* Text loading animation */}
-                <h2 className="mt-8 text-xl font-medium tracking-tight text-zinc-300 animate-pulse">
-                    Loading SongDB...
+                {/* Text */}
+                <h2 className="text-lg font-bold tracking-tight text-white/60">
+                    Loading<span className="loading-ellipsis" />
                 </h2>
-                <div className="mt-2 flex gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+
+                {/* Waveform bars */}
+                <div className="flex items-end gap-[3px] h-4">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                        <div
+                            key={i}
+                            className="splash-wave-bar w-[3px] rounded-full bg-gradient-to-t from-primary to-secondary"
+                            style={{ animationDelay: `${i * 100}ms` }}
+                        />
+                    ))}
                 </div>
             </div>
         </div>

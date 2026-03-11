@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Youtube, Music2 } from "lucide-react";
-
+import { Search, Youtube } from "lucide-react";
+import Image from "next/image";
 import { getDynamicGradientStyle } from "@/lib/colors";
 
 interface Track {
@@ -83,9 +83,9 @@ export function DiscographySearch({ tracks, artistName }: { tracks: Track[]; art
                                 {track.rank}
                             </span>
                             <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
+                                <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0 relative">
                                     {track.coverArt ? (
-                                        <img src={track.coverArt} alt="" className="w-full h-full object-cover" />
+                                        <Image src={track.coverArt} alt="" fill className="object-cover" unoptimized />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center" style={getDynamicGradientStyle(track.title)}>
                                             <span className="text-sm font-bold text-white/40">{track.title?.charAt(0)?.toUpperCase()}</span>
@@ -111,7 +111,7 @@ export function DiscographySearch({ tracks, artistName }: { tracks: Track[]; art
                                     href={ytUrl(track.title, track.artist)}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="p-1.5 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all hover:scale-110"
+                                    className="rounded-full p-1.5 text-muted-foreground transition-all hover:scale-110 hover:bg-primary/10 hover:text-primary"
                                     title={`Play on YouTube`}
                                 >
                                     <Youtube className="w-4 h-4" />
@@ -131,8 +131,8 @@ export function DiscographySearch({ tracks, artistName }: { tracks: Track[]; art
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                     >
-                        <Youtube className="w-4 h-4 text-red-500" />
-                        Search "{query}" by {artistName} on YouTube
+                        <Youtube className="h-4 w-4 text-primary" />
+                        Search &quot;{query}&quot; by {artistName} on YouTube
                     </a>
                 </div>
             )}

@@ -5,9 +5,7 @@ import { LRUCache } from "lru-cache";
 import { headers } from "next/headers";
 import { fetchFeaturedDay, fetchTrendingSongs, fetchTopArtists, fetchTopAlbums, fetchArtistInfo, fetchArtistTopTracks, fetchSongInfo, extractLastFmImage, fetchTopTags } from "@/lib/lastfm";
 import { searchArtistsMB, getArtistDiscographyMB, getAlbumTracklistMB, fetchImageFromDeezer } from "@/lib/musicbrainz";
-import { fetchNewsAbout } from "@/lib/newsapi";
-import { fetchRssNews } from "@/lib/rss";
-import { generateSongSummary, generateEmbedding } from "@/lib/cohere";
+
 import { fetchYouTubeEmbed } from "@/lib/youtube";
 
 // --- Rate Limiting Setup ---
@@ -69,7 +67,7 @@ export async function getTopTagsAction(limit = 15) {
     const raw = await fetchTopTags(parsedLimit + 10);
     if (!raw) return [];
     return raw
-        .filter((tag: any) => !EXCLUDED_TAGS.has(tag.name?.toLowerCase?.()))
+        .filter((tag: { name?: string }) => !EXCLUDED_TAGS.has(tag.name?.toLowerCase() || ''))
         .slice(0, parsedLimit);
 }
 
@@ -128,11 +126,6 @@ export async function resolveImageAction(query: string, type: 'artist' | 'track'
 }
 
 // Secondary Provider APIs
-export async function getNewsAction() {
-    await checkRateLimit("news", 60);
-    return fetchRssNews();
-}
-
 export async function getYouTubeVideoAction(query: string) {
     await checkRateLimit("youtube", 60);
     const parsedQuery = stringSchema.parse(query);
@@ -140,34 +133,6 @@ export async function getYouTubeVideoAction(query: string) {
 }
 
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
-
-// AI Actions - stricter rate limit
-export async function generateSongSummaryAction(songName: string, artistName: string, idToken: string) {
-    if (!idToken) throw new Error("Unauthorized: Missing ID token");
-    try {
-        await adminAuth.verifyIdToken(idToken);
-    } catch (e) {
-        throw new Error("Unauthorized: Invalid ID token");
-    }
-
-    await checkRateLimit("ai-summary", 5); // 5 requests per minute
-    const parsedSong = stringSchema.parse(songName);
-    const parsedArtist = stringSchema.parse(artistName);
-    return generateSongSummary(parsedSong, parsedArtist);
-}
-
-export async function generateEmbeddingAction(text: string, idToken: string) {
-    if (!idToken) throw new Error("Unauthorized: Missing ID token");
-    try {
-        await adminAuth.verifyIdToken(idToken);
-    } catch (e) {
-        throw new Error("Unauthorized: Invalid ID token");
-    }
-
-    await checkRateLimit("ai-embed", 10); // 10 requests per minute
-    const parsedText = stringSchema.parse(text);
-    return generateEmbedding(parsedText);
-}
 
 // ─── Reviews ───
 import { createReviewSchema, type CreateReviewInput, type Review } from "@/schemas/reviewSchema";
@@ -177,7 +142,7 @@ export async function createReviewAction(data: CreateReviewInput, idToken: strin
     let decodedToken;
     try {
         decodedToken = await adminAuth.verifyIdToken(idToken);
-    } catch (e) {
+    } catch {
         throw new Error("Unauthorized: Invalid ID token");
     }
 
@@ -236,7 +201,7 @@ export async function addFavoriteAction(data: AddFavoriteInput, idToken: string)
     let decodedToken;
     try {
         decodedToken = await adminAuth.verifyIdToken(idToken);
-    } catch (e) {
+    } catch {
         throw new Error("Unauthorized: Invalid ID token");
     }
 
@@ -276,7 +241,7 @@ export async function removeFavoriteAction(itemId: string, itemType: "song" | "a
     let decodedToken;
     try {
         decodedToken = await adminAuth.verifyIdToken(idToken);
-    } catch (e) {
+    } catch {
         throw new Error("Unauthorized: Invalid ID token");
     }
 
@@ -299,7 +264,7 @@ export async function checkFavoriteAction(itemId: string, itemType: "song" | "ar
     let decodedToken;
     try {
         decodedToken = await adminAuth.verifyIdToken(idToken);
-    } catch (e) {
+    } catch {
         throw new Error("Unauthorized: Invalid ID token");
     }
 
@@ -321,7 +286,7 @@ export async function getUserFavoritesAction(idToken: string): Promise<Favorite[
     let decodedToken;
     try {
         decodedToken = await adminAuth.verifyIdToken(idToken);
-    } catch (e) {
+    } catch {
         throw new Error("Unauthorized: Invalid ID token");
     }
 
@@ -432,7 +397,7 @@ export async function getUserReviewsAction(idToken: string): Promise<Review[]> {
     let decodedToken;
     try {
         decodedToken = await adminAuth.verifyIdToken(idToken);
-    } catch (e) {
+    } catch {
         throw new Error("Unauthorized: Invalid ID token");
     }
 

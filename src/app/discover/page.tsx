@@ -1,4 +1,5 @@
 import { batchResolveTrackImages } from '@/lib/imageResolver';
+import Image from 'next/image';
 import { SongCard } from '@/components/ui/SongCard';
 import { Sparkles, Shuffle, Youtube, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -57,10 +58,11 @@ export default async function DiscoverPage() {
     ]);
 
     // Batch resolve images for both lists concurrently
-    const moodPrepared = moodTracks.slice(0, 50).map((t: any) => ({
+    interface LastFmTrack { name: string; artist?: { name?: string }; image?: { '#text'?: string; size?: string }[] }
+    const moodPrepared = moodTracks.slice(0, 50).map((t: LastFmTrack) => ({
         name: t.name, artist: t.artist?.name || 'Unknown', image: t.image,
     }));
-    const randomPrepared = randomTracks.slice(0, 50).map((t: any) => ({
+    const randomPrepared = randomTracks.slice(0, 50).map((t: LastFmTrack) => ({
         name: t.name, artist: t.artist?.name || 'Unknown', image: t.image,
     }));
 
@@ -69,12 +71,13 @@ export default async function DiscoverPage() {
         batchResolveTrackImages(randomPrepared, 10),
     ]);
 
-    const enrichedMood = moodPrepared.map((track: { name: string, artist: string, image: any }, i: number) => ({
+    interface EnrichedTrack { name: string; artist: string; image?: LastFmTrack['image'] }
+    const enrichedMood = moodPrepared.map((track: EnrichedTrack, i: number) => ({
         id: encodeURIComponent(track.name), title: track.name,
         artist: track.artist, coverArt: moodImages[i], rank: i + 1,
     }));
 
-    const enrichedRandom = randomPrepared.map((track: { name: string, artist: string, image: any }, i: number) => ({
+    const enrichedRandom = randomPrepared.map((track: EnrichedTrack, i: number) => ({
         id: encodeURIComponent(track.name), title: track.name,
         artist: track.artist, coverArt: randomImages[i], rank: i + 1,
     }));
@@ -113,7 +116,7 @@ export default async function DiscoverPage() {
                         <span>Artist</span>
                         <span></span>
                     </div>
-                    {enrichedMood.map((track: any) => (
+                    {enrichedMood.map((track: { id: string; title: string; artist: string; coverArt: string | null; rank: number }) => (
                         <div
                             key={'mood-' + track.id + track.rank}
                             className="grid grid-cols-[40px_1fr_1fr_50px] gap-3 px-4 py-3 items-center border-b border-white/[0.03] hover:bg-white/[0.03] transition-colors group"
@@ -124,7 +127,7 @@ export default async function DiscoverPage() {
                             <div className="flex items-center gap-3 min-w-0">
                                 <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-md overflow-hidden bg-muted shrink-0 relative">
                                     {track.coverArt ? (
-                                        <img src={track.coverArt} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                                        <Image src={track.coverArt} alt="" fill className="object-cover" unoptimized />
                                     ) : (
                                         <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/10 to-transparent flex items-center justify-center text-[10px] font-bold text-primary">♪</div>
                                     )}
@@ -140,7 +143,7 @@ export default async function DiscoverPage() {
                                 href={ytUrl(track.title, track.artist)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-1.5 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                                 title="Play on YouTube"
                             >
                                 <Youtube className="w-4 h-4" />
@@ -168,7 +171,7 @@ export default async function DiscoverPage() {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {enrichedRandom.map((track: any) => (
+                    {enrichedRandom.map((track: { id: string; title: string; artist: string; coverArt: string | null; rank: number }) => (
                         <SongCard
                             key={'rand-' + track.id + track.rank}
                             id={track.id}
