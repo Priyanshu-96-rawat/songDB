@@ -1,62 +1,14 @@
 import { audioEngine } from '@/lib/player/audioEngine';
 
-type AudioManagerEvent = 'play' | 'playing' | 'pause' | 'waiting' | 'timeupdate' | 'ended';
-type AudioManagerHandler = () => void;
-
+/**
+ * Legacy AudioManager wrapper.
+ * With the YouTube IFrame API, the AudioEngine handles all state updates
+ * directly via YT.Player events. This class is kept for API compatibility
+ * but delegates everything to audioEngine.
+ */
 class AudioManager {
-    private listeners = new Map<AudioManagerEvent, Set<AudioManagerHandler>>();
-    private bound = false;
-
-    constructor() {
-        this.bindAudioEvents();
-    }
-
-    private bindAudioEvents() {
-        if (this.bound || typeof window === 'undefined') return;
-
-        const audio = audioEngine.audio;
-        if (!audio || typeof audio.addEventListener !== 'function') return;
-
-        (['play', 'playing', 'pause', 'waiting', 'timeupdate', 'ended'] as const).forEach((eventName) => {
-            audio.addEventListener(eventName, () => this.emit(eventName));
-        });
-
-        this.bound = true;
-    }
-
-    private emit(eventName: AudioManagerEvent) {
-        const handlers = this.listeners.get(eventName);
-        if (!handlers) return;
-
-        handlers.forEach((handler) => handler());
-    }
-
-    on(eventName: AudioManagerEvent, handler: AudioManagerHandler) {
-        this.bindAudioEvents();
-
-        const handlers = this.listeners.get(eventName) ?? new Set<AudioManagerHandler>();
-        handlers.add(handler);
-        this.listeners.set(eventName, handlers);
-
-        return () => this.off(eventName, handler);
-    }
-
-    off(eventName: AudioManagerEvent, handler: AudioManagerHandler) {
-        const handlers = this.listeners.get(eventName);
-        if (!handlers) return;
-
-        handlers.delete(handler);
-        if (handlers.size === 0) {
-            this.listeners.delete(eventName);
-        }
-    }
-
-    play(videoIdOrUrl: string) {
-        const url = videoIdOrUrl.startsWith('http') || videoIdOrUrl.startsWith('/')
-            ? videoIdOrUrl
-            : `/api/youtube-stream?id=${encodeURIComponent(videoIdOrUrl)}`;
-
-        audioEngine.play(url);
+    play(videoId: string) {
+        audioEngine.play(videoId);
     }
 
     pause() {
@@ -76,11 +28,11 @@ class AudioManager {
     }
 
     getCurrentTime() {
-        return audioEngine.audio?.currentTime ?? 0;
+        return audioEngine.getCurrentTime();
     }
 
     getDuration() {
-        return audioEngine.audio?.duration ?? 0;
+        return audioEngine.getDuration();
     }
 }
 

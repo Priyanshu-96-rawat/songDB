@@ -140,11 +140,11 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                 }
             });
             navigator.mediaSession.setActionHandler('seekbackward', () => {
-                const newTime = Math.max(0, audioEngine.audio.currentTime - 10);
+                const newTime = Math.max(0, audioEngine.getCurrentTime() - 10);
                 get().setProgress(newTime);
             });
             navigator.mediaSession.setActionHandler('seekforward', () => {
-                const newTime = Math.min(get().duration, audioEngine.audio.currentTime + 10);
+                const newTime = Math.min(get().duration, audioEngine.getCurrentTime() + 10);
                 get().setProgress(newTime);
             });
         }
@@ -199,8 +199,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
 
             // Play via our new AudioEngine
             if (typeof window !== 'undefined') {
-                const url = `/api/youtube-stream?id=${encodeURIComponent(track.videoId)}`;
-                audioEngine.play(url);
+                audioEngine.play(track.videoId);
 
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.metadata = new MediaMetadata({
@@ -244,7 +243,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
         setProgress: (progress) => {
             // Only seek if the difference is significant to avoid loops from ontimeupdate
             if (typeof window !== 'undefined') {
-                const diff = Math.abs(audioEngine.audio.currentTime - progress);
+                const diff = Math.abs(audioEngine.getCurrentTime() - progress);
                 if (diff > 1) {
                     audioEngine.seek(progress);
                 }
@@ -361,7 +360,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                     isLoadingLyrics: false,
                 });
 
-                if (typeof window !== 'undefined') audioEngine.play(`/api/youtube-stream?id=${encodeURIComponent(nextTrack.videoId)}`);
+                if (typeof window !== 'undefined') audioEngine.play(nextTrack.videoId);
                 get().fetchLyrics(nextTrack.videoId, nextTrack.durationSeconds);
                 get().fetchUpNext(nextTrack.videoId);
                 get().prefetchNextTrack();
@@ -388,7 +387,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                     isLoadingLyrics: false,
                 });
 
-                if (typeof window !== 'undefined') audioEngine.play(`/api/youtube-stream?id=${encodeURIComponent(nextTrack.videoId)}`);
+                if (typeof window !== 'undefined') audioEngine.play(nextTrack.videoId);
                 get().fetchLyrics(nextTrack.videoId, nextTrack.durationSeconds);
 
                 if (remainingUpNext.length < 3) {
@@ -448,7 +447,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                 isLoadingLyrics: false,
             });
 
-            if (typeof window !== 'undefined') audioEngine.play(`/api/youtube-stream?id=${encodeURIComponent(prevTrack.videoId)}`);
+            if (typeof window !== 'undefined') audioEngine.play(prevTrack.videoId);
             get().fetchLyrics(prevTrack.videoId, prevTrack.durationSeconds);
             get().fetchUpNext(prevTrack.videoId);
             get().prefetchNextTrack();
@@ -610,23 +609,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
         },
 
         prefetchNextTrack: () => {
-            const { queue, isShuffled, upNextTracks, autoplayEnabled } = get();
-            let nextVideoId = null;
-
-            if (queue.length > 0) {
-                const nextIndex = isShuffled ? Math.floor(Math.random() * queue.length) : 0;
-                nextVideoId = queue[nextIndex].videoId;
-            } else if (autoplayEnabled && upNextTracks.length > 0) {
-                nextVideoId = upNextTracks[0].videoId;
-            }
-
-            if (nextVideoId) {
-                const url = `/api/youtube-stream?id=${encodeURIComponent(nextVideoId)}`;
-                if (typeof window !== 'undefined') {
-                    // Start buffering the actual audio file
-                    audioEngine.preload(url);
-                }
-            }
+            // No-op: YouTube IFrame API doesn't support preloading another video
         },
     };
 });

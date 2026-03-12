@@ -32,23 +32,9 @@ const queueManager = new QueueManager();
 
 export const usePlayerStore = create<PlayerState>((set, get) => {
 
-    // Setup audio manager listeners
-    audioManager.on('play', () => set({ isPlaying: true, isBuffering: false }));
-    audioManager.on('playing', () => set({ isPlaying: true, isBuffering: false }));
-    audioManager.on('pause', () => set({ isPlaying: false }));
-    audioManager.on('waiting', () => set({ isBuffering: true }));
-
-    audioManager.on('timeupdate', () => {
-        set({
-            currentTime: audioManager.getCurrentTime(),
-            duration: audioManager.getDuration() || get().currentTrack?.durationSeconds || 0
-        });
-    });
-
-    audioManager.on('ended', () => {
-        // Automatically play next track
-        get().next();
-    });
+    // Note: With YouTube IFrame API, state updates are handled
+    // internally by the AudioEngine via YT.Player events.
+    // The legacy audioManager.on() event bindings are no longer needed.
 
     // Keyboard controls (Media Session API)
     if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
