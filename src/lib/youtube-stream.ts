@@ -1,7 +1,158 @@
 
 import Innertube from 'youtubei.js';
-import { createEstimatedLyrics, createUnsyncedLyrics, type TrackLyrics } from '@/lib/lyrics';
-import { resolveCaptionTranscript } from '@/lib/yt-dlp';
+
+// ─── Lyrics Types ───────────────────────────────────────────────────
+export interface LyricLine {
+    text: string;
+    startMs: number | null;
+    endMs: number | null;
+}
+
+export interface TrackLyrics {
+    text: string;
+    lines: LyricLine[];
+    synced: boolean;
+    source: 'official' | 'captions';
+    language?: string | null;
+    timingMode: 'static' | 'estimated' | 'synced';
+}
+
+// ─── Lyrics Utilities ───────────────────────────────────────────────
+export function normalizeLyricText(text: string): string {
+    return text
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/^Source:.*$/gim, '')
+        .replace(/^By:.*$/gim, '')
+        .replace(/\r/g, '')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/\s+/g, (match) => (match.includes('\n') ? match : ' '))
+        .trim();
+}
+
+export function createUnsyncedLyrics(
+    text: string,
+    source: TrackLyrics['source'] = 'official',
+    language: string | null = null
+): TrackLyrics | null {
+    const normalized = normalizeLyricText(text);
+    if (!normalized) {
+        return null;
+    }
+
+    const lines = normalized
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map<LyricLine>((line) => ({
+            text: line,
+            startMs: null,
+            endMs: null,
+        }));
+
+    if (lines.length === 0) {
+        return null;
+    }
+
+    return {
+        text: lines.map((line) => line.text).join('\n'),
+        lines,
+        synced: false,
+        source,
+        language,
+        timingMode: 'static',
+    };
+}
+
+export function createEstimatedLyrics(
+    text: string,
+    durationSeconds: number,
+    source: TrackLyrics['source'] = 'official',
+    language: string | null = null
+): TrackLyrics | null {
+    const baseLyrics = createUnsyncedLyrics(text, source, language);
+    if (!baseLyrics) {
+        return null;
+    }
+
+    const durationMs = Math.round(durationSeconds * 1000);
+    if (!Number.isFinite(durationMs) || durationMs <= 0 || baseLyrics.lines.length < 2) {
+        return baseLyrics;
+    }
+
+    const minimumLineMs = 1400;
+    const weights = baseLyrics.lines.map((line) => {
+        const wordCount = line.text.split(/\s+/).filter(Boolean).length;
+        return Math.max(1, wordCount + line.text.length / 18);
+    });
+    const extraBudget = Math.max(durationMs - baseLyrics.lines.length * minimumLineMs, 0);
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+
+    let cursor = 0;
+    const lines = baseLyrics.lines.map((line, index) => {
+        if (index === baseLyrics.lines.length - 1) {
+            return {
+                ...line,
+                startMs: Math.min(cursor, durationMs),
+                endMs: durationMs,
+            };
+        }
+
+        const extraDuration =
+            totalWeight > 0 ? Math.round(extraBudget * (weights[index] / totalWeight)) : 0;
+        const lineDuration = minimumLineMs + extraDuration;
+        const startMs = Math.min(cursor, durationMs);
+        const endMs = Math.min(durationMs, startMs + lineDuration);
+        cursor = endMs;
+
+        return {
+            ...line,
+            startMs,
+            endMs,
+        };
+    });
+
+    return {
+        ...baseLyrics,
+        lines,
+        synced: true,
+        timingMode: 'estimated',
+    };
+}
+
+export function getActiveLyricIndex(lines: LyricLine[], currentMs: number): number {
+    const syncedLines = lines.filter((line) => line.startMs !== null);
+    if (syncedLines.length === 0) {
+        return -1;
+    }
+
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const line = lines[index];
+        if (line.startMs === null) {
+            continue;
+        }
+
+        const nextLine = lines
+            .slice(index + 1)
+            .find((candidate) => candidate.startMs !== null);
+        const endMs = line.endMs ?? (nextLine?.startMs ?? Number.POSITIVE_INFINITY);
+
+        if (currentMs >= line.startMs && currentMs < endMs) {
+            return index;
+        }
+    }
+
+    const firstTimedIndex = lines.findIndex((line) => line.startMs !== null);
+    if (firstTimedIndex >= 0 && currentMs < (lines[firstTimedIndex]?.startMs ?? 0)) {
+        return firstTimedIndex;
+    }
+
+    return lines.length - 1;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────
 export interface YouTubeSearchResult {
@@ -526,6 +677,181 @@ export async function getYTMusicExplore(): Promise<Array<{ title: string; tracks
 }
 
 // ─── Lyrics ──────────────────────────────────────────────────────────
+// ─── Caption / Lyrics Extraction ─────────────────────────────────────
+
+const DEFAULT_CAPTION_LANGUAGE_ORDER = ['en', 'en-US', 'en-GB', 'hi', 'hi-IN'];
+
+function sanitizeTimedLine(text: string): string | null {
+    const normalized = normalizeLyricText(text);
+    if (!normalized || /^\[[^\]]+\]$/.test(normalized)) {
+        return null;
+    }
+    return normalized;
+}
+
+function dedupeTimedLines(lines: LyricLine[]): LyricLine[] {
+    const deduped: LyricLine[] = [];
+    for (const line of lines) {
+        if (!line.text) continue;
+        const previous = deduped[deduped.length - 1];
+        if (previous && previous.text === line.text) {
+            previous.endMs = line.endMs ?? previous.endMs;
+            continue;
+        }
+        deduped.push(line);
+    }
+    return deduped;
+}
+
+function buildSyncedLyrics(lines: LyricLine[], language: string): TrackLyrics | null {
+    const deduped = dedupeTimedLines(lines);
+    if (deduped.length === 0) return null;
+    return {
+        text: deduped.map((line) => line.text).join('\n'),
+        lines: deduped,
+        synced: deduped.some((line) => line.startMs !== null),
+        source: 'captions',
+        language,
+        timingMode: 'synced',
+    };
+}
+
+function parseJson3Transcript(raw: string, language: string): TrackLyrics | null {
+    try {
+        const payload = JSON.parse(raw) as {
+            events?: Array<{
+                tStartMs?: number;
+                dDurationMs?: number;
+                segs?: Array<{ utf8?: string }>;
+            }>;
+        };
+
+        const lines = (payload.events ?? [])
+            .map<LyricLine | null>((event) => {
+                const text = sanitizeTimedLine((event.segs ?? []).map((segment) => segment.utf8 ?? '').join(''));
+                if (!text) return null;
+                const startMs = typeof event.tStartMs === 'number' ? event.tStartMs : null;
+                const durationMs = typeof event.dDurationMs === 'number' ? event.dDurationMs : null;
+                return {
+                    text,
+                    startMs,
+                    endMs: startMs !== null && durationMs !== null ? startMs + durationMs : null,
+                };
+            })
+            .filter((line): line is LyricLine => line !== null);
+
+        return buildSyncedLyrics(lines, language);
+    } catch {
+        return null;
+    }
+}
+
+function parseTimestampMs(value: string): number | null {
+    const normalized = value.replace(',', '.');
+    const parts = normalized.split(':').map((part) => part.trim());
+    if (parts.length < 2 || parts.length > 3) return null;
+
+    const [hours, minutes, seconds] =
+        parts.length === 3
+            ? [parts[0], parts[1], parts[2]]
+            : ['0', parts[0], parts[1]];
+
+    const totalMs =
+        Number.parseFloat(seconds) * 1000 +
+        Number.parseInt(minutes, 10) * 60_000 +
+        Number.parseInt(hours, 10) * 3_600_000;
+
+    return Number.isFinite(totalMs) ? Math.round(totalMs) : null;
+}
+
+function parseVttTranscript(raw: string, language: string): TrackLyrics | null {
+    const cues = raw
+        .split(/\r?\n\r?\n/)
+        .map((block) => block.trim())
+        .filter(Boolean);
+
+    const lines: LyricLine[] = [];
+
+    for (const cue of cues) {
+        const parts = cue
+            .split(/\r?\n/)
+            .map((part) => part.trim())
+            .filter(Boolean);
+
+        const timeLineIndex = parts.findIndex((part) => part.includes('-->'));
+        if (timeLineIndex === -1) continue;
+
+        const [startRaw, endRaw] = parts[timeLineIndex].split('-->').map((part) => part.trim().split(' ')[0] ?? '');
+        const startMs = parseTimestampMs(startRaw);
+        const endMs = parseTimestampMs(endRaw);
+        const text = sanitizeTimedLine(parts.slice(timeLineIndex + 1).join(' '));
+
+        if (!text) continue;
+
+        lines.push({ text, startMs, endMs });
+    }
+
+    return buildSyncedLyrics(lines, language);
+}
+
+type CaptionTrack = {
+    baseUrl: string;
+    languageCode: string;
+    kind?: string;
+    name?: { simpleText?: string };
+};
+
+async function resolveCaptionTranscript(
+    videoId: string,
+    preferredLanguages: string[] = DEFAULT_CAPTION_LANGUAGE_ORDER
+): Promise<TrackLyrics | null> {
+    const yt = await getClient();
+    const info = await yt.getBasicInfo(videoId);
+
+    const infoRaw = info as unknown as Record<string, unknown>;
+    const captions = (infoRaw.captions ?? (info as unknown as { player_response?: Record<string, unknown> }).player_response?.captions) as Record<string, unknown> | undefined;
+    const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined;
+    const captionTracks = (renderer?.captionTracks ?? []) as CaptionTrack[];
+
+    if (captionTracks.length === 0) return null;
+
+    let selected: CaptionTrack | null = null;
+    for (const lang of preferredLanguages) {
+        const match = captionTracks.find((t) => t.languageCode === lang);
+        if (match) { selected = match; break; }
+    }
+    if (!selected) selected = captionTracks[0];
+    if (!selected?.baseUrl) return null;
+
+    const json3Url = `${selected.baseUrl}&fmt=json3`;
+    try {
+        const response = await fetch(json3Url, {
+            headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'en-US,en;q=0.9' },
+            cache: 'no-store',
+        });
+        if (response.ok) {
+            const text = await response.text();
+            const result = parseJson3Transcript(text, selected.languageCode);
+            if (result) return result;
+        }
+    } catch { /* fall through */ }
+
+    const vttUrl = `${selected.baseUrl}&fmt=vtt`;
+    try {
+        const response = await fetch(vttUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'en-US,en;q=0.9' },
+            cache: 'no-store',
+        });
+        if (response.ok) {
+            const text = await response.text();
+            return parseVttTranscript(text, selected.languageCode)
+                ?? createUnsyncedLyrics(text, 'captions', selected.languageCode);
+        }
+    } catch { /* no captions */ }
+
+    return null;
+}
+
 export async function getYTMusicLyrics(videoId: string, durationSeconds?: number): Promise<TrackLyrics | null> {
     let captionLyrics: TrackLyrics | null = null;
 

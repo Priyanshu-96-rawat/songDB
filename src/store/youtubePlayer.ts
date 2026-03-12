@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { TrackLyrics } from '@/lib/lyrics';
+import type { TrackLyrics } from '@/lib/youtube-stream';
 import { audioEngine } from '@/lib/player/audioEngine';
 
 export interface YouTubeTrack {
@@ -39,6 +39,7 @@ interface YouTubePlayerState {
     isLoading: boolean;
     error: string | null;
     progress: number;
+    bufferedPercent: number;
     duration: number;
     volume: number;
     isMuted: boolean;
@@ -165,6 +166,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
         isLoading: false,
         error: null,
         progress: 0,
+        bufferedPercent: 0,
         duration: 0,
         volume: 1,
         isMuted: false,
@@ -189,6 +191,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                 isPlaying: true,
                 isLoading: true,
                 progress: 0,
+                bufferedPercent: 0,
                 duration: track.durationSeconds || 0,
                 history: newHistory.slice(-50),
                 isPlayerVisible: true,
@@ -399,7 +402,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
 
             // 3. Repeat all
             if (repeatMode === 'all' && currentTrack) {
-                set({ progress: 0, isPlaying: true, isLoading: true });
+                set({ progress: 0, bufferedPercent: 0, isPlaying: true, isLoading: true });
                 if (typeof window !== 'undefined') {
                     audioEngine.seek(0);
                     audioEngine.resume();
@@ -416,7 +419,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
             const { history, currentTrack, progress } = get();
 
             if (progress > 3 && currentTrack) {
-                set({ progress: 0, isLoading: true });
+                set({ progress: 0, bufferedPercent: 0, isLoading: true });
                 if (typeof window !== 'undefined') {
                     audioEngine.seek(0);
                     audioEngine.resume();
@@ -442,6 +445,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                 isPlaying: true,
                 isLoading: true,
                 progress: 0,
+                bufferedPercent: 0,
                 duration: prevTrack.durationSeconds || 0,
                 lyrics: null,
                 isLoadingLyrics: false,

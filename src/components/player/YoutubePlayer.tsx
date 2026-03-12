@@ -27,7 +27,7 @@ import {
     Waves,
     X,
 } from "lucide-react";
-import { getActiveLyricIndex } from "@/lib/lyrics";
+import { getActiveLyricIndex } from "@/lib/youtube-stream";
 import { audioEngine } from "@/lib/player/audioEngine";
 import { TrackActionMenu } from "@/components/ui/TrackActionMenu";
 import { useLibraryStore } from "@/store/library";
@@ -201,6 +201,7 @@ export default function YoutubePlayer() {
         isPlaying,
         isLoading,
         progress,
+        bufferedPercent,
         duration,
         volume,
         isMuted,
@@ -236,7 +237,6 @@ export default function YoutubePlayer() {
 
     const [expanded, setExpanded] = useState(false);
     const [hoverProgress, setHoverProgress] = useState<number | null>(null);
-    const [bufferedPercent, setBufferedPercent] = useState(0);
     const [sleepTimerNow, setSleepTimerNow] = useState(() => Date.now());
     const lyricRefs = useRef<Record<number, HTMLParagraphElement | null>>({});
 
@@ -255,34 +255,6 @@ export default function YoutubePlayer() {
             setExpanded(false);
         }
     }
-
-    useEffect(() => {
-        const audio = audioEngine.audio;
-        if (!audio) return;
-
-        const syncBuffered = () => {
-            const effectiveDuration = currentDuration || audio.duration;
-            if (!Number.isFinite(effectiveDuration) || effectiveDuration <= 0 || !audio.buffered?.length) {
-                setBufferedPercent(0);
-                return;
-            }
-
-            try {
-                const end = audio.buffered.end(audio.buffered.length - 1);
-                setBufferedPercent(Math.min((end / effectiveDuration) * 100, 100));
-            } catch {
-                setBufferedPercent(0);
-            }
-        };
-
-        syncBuffered();
-        audio.addEventListener("progress", syncBuffered);
-        audio.addEventListener("loadedmetadata", syncBuffered);
-        return () => {
-            audio.removeEventListener("progress", syncBuffered);
-            audio.removeEventListener("loadedmetadata", syncBuffered);
-        };
-    }, [currentDuration, currentTrack?.videoId]);
 
     useEffect(() => {
         if (!expanded || expandedTab !== "lyrics" || activeLyricIndex < 0) return;

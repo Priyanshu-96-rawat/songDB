@@ -60,9 +60,7 @@ export default function RootLayout({
                 </main>
                 <footer className="relative z-10 px-3 pb-28 pt-2 md:px-5">
                   <div className="shell-panel-soft flex items-center justify-between rounded-[26px] px-4 py-3 text-[11px] text-white/26">
-                    <p className="uppercase tracking-[0.24em] text-white/18">
-                      Made by Priyanshu
-                    </p>
+
                     <p className="uppercase tracking-[0.24em] text-white/18">
                       Powered by YouTube Music
                     </p>

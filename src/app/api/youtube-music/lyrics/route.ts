@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createUnsyncedLyrics } from '@/lib/lyrics';
+import { createUnsyncedLyrics, getYTMusicLyrics } from '@/lib/youtube-stream';
 import { enforceRouteRateLimit } from '@/lib/request-guard';
-import { getYTMusicLyrics } from '@/lib/youtube-stream';
 
 const lyricsSchema = z.object({
     id: z.string().min(1, 'Video ID is required').max(20),
