@@ -3,17 +3,6 @@ import { createUnsyncedLyrics, normalizeLyricText, type LyricLine, type TrackLyr
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-type AudioFormatInfo = {
-    url: string;
-    mimeType: string;
-    bitrate: number;
-    audioSampleRate: number;
-    audioChannels: number;
-    codec: string;
-    container: string;
-    contentLength: number;
-};
-
 export type ResolvedAudioStream = {
     url: string;
     mimeType: string;
@@ -24,7 +13,7 @@ export type ResolvedAudioStream = {
     container: string | null;
 };
 
-// ─── Singleton Innertube Client (with player) ────────────────────────
+// ─── Singleton Innertube Client (with player for stream deciphering) ─
 
 let playerClient: Innertube | null = null;
 
@@ -34,6 +23,7 @@ async function getPlayerClient(): Promise<Innertube> {
             lang: 'en',
             location: 'US',
             retrieve_player: true,
+            generate_session_locally: true,
         });
     }
     return playerClient;
@@ -41,7 +31,7 @@ async function getPlayerClient(): Promise<Innertube> {
 
 // ─── Caches ──────────────────────────────────────────────────────────
 
-const STREAM_CACHE_TTL_MS = 10 * 60 * 1000;
+const STREAM_CACHE_TTL_MS = 8 * 60 * 1000; // 8 minutes (YouTube URLs expire in ~6h but refresh often)
 const streamCache = new Map<string, { value: ResolvedAudioStream; cachedAt: number }>();
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -58,61 +48,60 @@ function parseExpiresAt(url: string): number | null {
     }
 }
 
-function getCodecRank(codec: string): number {
-    const c = codec.toLowerCase();
-    if (c.includes('opus')) return 5;
-    if (c.includes('vorbis')) return 4;
-    if (c.includes('mp4a') || c.includes('aac')) return 3;
-    if (c.includes('mp3')) return 2;
-    return 1;
-}
-
-function scoreFormat(f: AudioFormatInfo): number {
-    const codecRank = getCodecRank(f.codec);
-    return codecRank * 500 + f.bitrate / 100 + f.audioSampleRate / 1000 + f.audioChannels * 20;
-}
-
 // ─── Stream Extraction via youtubei.js ───────────────────────────────
 
 async function extractAudioStream(videoId: string): Promise<ResolvedAudioStream> {
     const yt = await getPlayerClient();
+
+    // getBasicInfo fetches video info including streaming data with deciphered URLs
     const info = await yt.getBasicInfo(videoId);
 
     const streamingData = info.streaming_data;
     if (!streamingData) {
-        throw new Error(`No streaming data available for video ${videoId}`);
+        // Reset client in case of stale player tokens
+        playerClient = null;
+        throw new Error(`No streaming data available for video ${videoId}. Player may need refresh.`);
     }
 
-    // Collect all audio-only adaptive formats
-    const audioFormats: AudioFormatInfo[] = [];
     const adaptiveFormats = streamingData.adaptive_formats ?? [];
 
+    // Filter to audio-only formats that have a URL
+    type ScoredFormat = {
+        url: string;
+        mimeType: string;
+        bitrate: number;
+        codec: string;
+        container: string;
+        sampleRate: number;
+        channels: number;
+    };
+
+    const audioFormats: ScoredFormat[] = [];
+
     for (const fmt of adaptiveFormats) {
-        // Skip video formats — we only want audio
-        if (fmt.has_video && !fmt.has_audio) continue;
+        // Only audio formats
+        if (fmt.has_video) continue;
         if (!fmt.has_audio) continue;
 
-        const raw = fmt as unknown as Record<string, unknown>;
-
-        // Get the stream URL — youtubei.js deciphers automatically when retrieve_player is true
-        const url = (raw.url as string | undefined) ?? undefined;
+        // Access the deciphered URL - youtubei.js provides it after deciphering
+        const fmtRaw = fmt as unknown as Record<string, unknown>;
+        const url = fmtRaw.url as string | undefined;
         if (!url) continue;
 
-        const mimeType = (raw.mime_type as string) ?? fmt.mime_type ?? 'audio/webm';
-        const codec = mimeType.includes('codecs=')
-            ? mimeType.split('codecs="')[1]?.split('"')[0] ?? 'unknown'
-            : 'unknown';
-        const container = mimeType.split(';')[0]?.split('/')[1] ?? 'webm';
+        const rawMime = (fmtRaw.mime_type as string) ?? 'audio/webm; codecs="opus"';
+        const mimeBase = rawMime.split(';')[0] ?? 'audio/webm';
+        const codecMatch = rawMime.match(/codecs="?([^"]*)"?/);
+        const codec = codecMatch?.[1] ?? 'unknown';
+        const container = mimeBase.split('/')[1] ?? 'webm';
 
         audioFormats.push({
             url,
-            mimeType: mimeType.split(';')[0] ?? 'audio/webm',
-            bitrate: (raw.bitrate as number) ?? (raw.average_bitrate as number) ?? 0,
-            audioSampleRate: Number.parseInt(String(raw.audio_sample_rate ?? '0'), 10),
-            audioChannels: (raw.audio_channels as number) ?? 2,
+            mimeType: mimeBase,
+            bitrate: (fmtRaw.bitrate as number) ?? (fmtRaw.average_bitrate as number) ?? 0,
             codec,
             container,
-            contentLength: Number.parseInt(String(raw.content_length ?? '0'), 10),
+            sampleRate: Number.parseInt(String(fmtRaw.audio_sample_rate ?? '0'), 10),
+            channels: (fmtRaw.audio_channels as number) ?? 2,
         });
     }
 
@@ -120,25 +109,33 @@ async function extractAudioStream(videoId: string): Promise<ResolvedAudioStream>
         throw new Error(`No audio formats found for video ${videoId}`);
     }
 
-    // Pick the best format by score
-    audioFormats.sort((a, b) => scoreFormat(b) - scoreFormat(a));
-    const best = audioFormats[0];
+    // Score and pick the best format
+    const scored = audioFormats.map((f) => {
+        const codecRank = f.codec.includes('opus') ? 5
+            : f.codec.includes('vorbis') ? 4
+            : (f.codec.includes('mp4a') || f.codec.includes('aac')) ? 3
+            : 2;
+        const score = codecRank * 500 + f.bitrate / 100 + f.sampleRate / 1000 + f.channels * 20;
+        return { ...f, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    const best = scored[0];
 
     return {
         url: best.url,
         mimeType: best.mimeType,
         requestHeaders: {
-            'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            Accept: '*/*',
+            'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
+            'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9',
-            Origin: 'https://music.youtube.com',
-            Referer: 'https://music.youtube.com/',
+            'Origin': 'https://www.youtube.com',
+            'Referer': 'https://www.youtube.com/',
         },
         expiresAt: parseExpiresAt(best.url),
         bitrateKbps: best.bitrate > 0 ? Math.round(best.bitrate / 1000) : null,
         audioCodec: best.codec !== 'unknown' ? best.codec : null,
-        container: best.container !== 'webm' ? best.container : 'webm',
+        container: best.container,
     };
 }
 
@@ -157,7 +154,16 @@ export async function resolveAudioStream(videoId: string, forceRefresh = false):
         }
     }
 
-    const extracted = await extractAudioStream(videoId);
+    let extracted: ResolvedAudioStream;
+    try {
+        extracted = await extractAudioStream(videoId);
+    } catch (err) {
+        // If extraction fails, reset client and retry once
+        console.error('[stream] First attempt failed, resetting client:', err);
+        playerClient = null;
+        extracted = await extractAudioStream(videoId);
+    }
+
     streamCache.set(videoId, { value: extracted, cachedAt: now });
     return extracted;
 }
@@ -296,11 +302,10 @@ export async function resolveCaptionTranscript(
 ): Promise<TrackLyrics | null> {
     const yt = await getPlayerClient();
     const info = await yt.getBasicInfo(videoId);
-    const raw = info as unknown as Record<string, unknown>;
-    
-    // Try to get captions from the player response
-    const playerResponse = raw.player_response as Record<string, unknown> | undefined;
-    const captions = (playerResponse?.captions ?? (raw as Record<string, unknown>).captions) as Record<string, unknown> | undefined;
+
+    // Extract captions from the player response
+    const infoRaw = info as unknown as Record<string, unknown>;
+    const captions = (infoRaw.captions ?? (info as unknown as { player_response?: Record<string, unknown> }).player_response?.captions) as Record<string, unknown> | undefined;
     const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined;
     const captionTracks = (renderer?.captionTracks ?? []) as CaptionTrack[];
 
