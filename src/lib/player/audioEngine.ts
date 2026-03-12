@@ -2,10 +2,7 @@ import { useYouTubePlayerStore } from "@/store/youtubePlayer"
 
 /**
  * AudioEngine (YouTube IFrame API)
- * 
- * Re-implemented to use the official YouTube IFrame Player API for playback.
- * This approach renders a hidden iframe and controls it via postMessage,
- * which is much more reliable than trying to proxy .googlevideo.com streams.
+ * Uses the official YouTube IFrame API for playback.
  */
 
 declare global {
@@ -18,6 +15,7 @@ declare global {
 class AudioEngine {
     private player: any = null
     private isApiLoaded = false
+    private isPlayerReady = false
     private currentVideoId: string | null = null
     private progressInterval: ReturnType<typeof setInterval> | null = null
     private containerId = "yt-player-container"
@@ -31,7 +29,6 @@ class AudioEngine {
     private loadApi() {
         if (this.isApiLoaded) return
 
-        // Create container if it doesn't exist
         if (!document.getElementById(this.containerId)) {
             const container = document.createElement("div")
             container.id = this.containerId
@@ -45,7 +42,6 @@ class AudioEngine {
             document.body.appendChild(container)
         }
 
-        // Load IFrame API script
         const tag = document.createElement("script")
         tag.src = "https://www.youtube.com/iframe_api"
         const firstScriptTag = document.getElementsByTagName("script")[0]
@@ -54,6 +50,7 @@ class AudioEngine {
         window.onYouTubeIframeAPIReady = () => {
             this.isApiLoaded = true
             console.log("[AudioEngine] YouTube IFrame API Ready")
+
             if (this.currentVideoId) {
                 this.initPlayer(this.currentVideoId)
             }
@@ -74,7 +71,7 @@ class AudioEngine {
         this.player = new window.YT.Player(this.containerId, {
             height: "1",
             width: "1",
-            videoId: videoId,
+            videoId,
             playerVars: {
                 autoplay: 1,
                 controls: 0,
@@ -88,42 +85,57 @@ class AudioEngine {
             events: {
                 onReady: () => {
                     console.log("[AudioEngine] Player Ready")
+                    this.isPlayerReady = true
+
                     useYouTubePlayerStore.setState({ isLoading: false })
                     this.startProgressUpdates()
                 },
+
                 onStateChange: (event: any) => {
-                    // YT.PlayerState: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
                     const state = event.data
+
                     switch (state) {
-                        case 1: // playing
-                            useYouTubePlayerStore.setState({ isPlaying: true, isLoading: false })
+                        case 1:
+                            useYouTubePlayerStore.setState({
+                                isPlaying: true,
+                                isLoading: false,
+                            })
                             this.startProgressUpdates()
                             break
-                        case 2: // paused
+
+                        case 2:
                             useYouTubePlayerStore.setState({ isPlaying: false })
                             this.stopProgressUpdates()
                             break
-                        case 3: // buffering
+
+                        case 3:
                             useYouTubePlayerStore.setState({ isLoading: true })
                             break
-                        case 0: // ended
-                            useYouTubePlayerStore.setState({ isPlaying: false, isLoading: false })
+
+                        case 0:
+                            useYouTubePlayerStore.setState({
+                                isPlaying: false,
+                                isLoading: false,
+                            })
                             this.stopProgressUpdates()
                             useYouTubePlayerStore.getState().handleTrackEnded()
                             break
-                        case 5: // cued
+
+                        case 5:
                             useYouTubePlayerStore.setState({ isLoading: false })
                             break
                     }
                 },
+
                 onError: (event: any) => {
                     console.error("[AudioEngine] Player Error:", event.data)
+
                     useYouTubePlayerStore.setState({
                         isPlaying: false,
                         isLoading: false,
-                        error: "Unable to play this video. It may be restricted or unavailable.",
+                        error: "Unable to play this video.",
                     })
-                    // Auto-skip after 3s
+
                     setTimeout(() => {
                         const { nextTrack, error } = useYouTubePlayerStore.getState()
                         if (error) nextTrack()
@@ -135,24 +147,26 @@ class AudioEngine {
 
     private startProgressUpdates() {
         this.stopProgressUpdates()
+
         this.progressInterval = setInterval(() => {
             if (!this.player || typeof this.player.getCurrentTime !== "function") return
 
             const currentTime = this.player.getCurrentTime()
             const duration = this.player.getDuration()
 
-            if (typeof currentTime === "number" && !isNaN(currentTime)) {
+            if (typeof currentTime === "number") {
                 useYouTubePlayerStore.setState({ progress: currentTime })
             }
-            if (typeof duration === "number" && !isNaN(duration) && duration > 0) {
-                useYouTubePlayerStore.setState({ duration: duration })
+
+            if (typeof duration === "number" && duration > 0) {
+                useYouTubePlayerStore.setState({ duration })
             }
 
             if (typeof this.player.getVideoLoadedFraction === "function") {
                 const fraction = this.player.getVideoLoadedFraction()
-                if (typeof fraction === "number" && !isNaN(fraction)) {
-                    useYouTubePlayerStore.setState({ bufferedPercent: fraction * 100 })
-                }
+                useYouTubePlayerStore.setState({
+                    bufferedPercent: fraction * 100,
+                })
             }
         }, 500)
     }
@@ -164,39 +178,47 @@ class AudioEngine {
         }
     }
 
-    // ── Public API ──
+    // PUBLIC API
 
     play(videoId: string) {
         this.currentVideoId = videoId
+
         if (!this.player) {
             this.initPlayer(videoId)
-        } else {
-            this.player.loadVideoById(videoId)
+        } else if (this.isPlayerReady) {
+            try {
+                this.player.loadVideoById(videoId)
+            } catch {
+                console.warn("[AudioEngine] loadVideoById called too early")
+            }
         }
-        useYouTubePlayerStore.setState({ isLoading: true, error: null })
+
+        useYouTubePlayerStore.setState({
+            isLoading: true,
+            error: null,
+        })
     }
 
     pause() {
-        if (this.player && typeof this.player.pauseVideo === "function") {
+        if (this.player && this.isPlayerReady) {
             this.player.pauseVideo()
         }
     }
 
     resume() {
-        if (this.player && typeof this.player.playVideo === "function") {
+        if (this.player && this.isPlayerReady) {
             this.player.playVideo()
         }
     }
 
     seek(time: number) {
-        if (this.player && typeof this.player.seekTo === "function") {
+        if (this.player && this.isPlayerReady) {
             this.player.seekTo(time, true)
         }
     }
 
     setVolume(volume: number) {
-        // YT uses 0-100
-        if (this.player && typeof this.player.setVolume === "function") {
+        if (this.player && this.isPlayerReady) {
             this.player.setVolume(volume * 100)
         }
     }
@@ -209,15 +231,11 @@ class AudioEngine {
         return this.player?.getDuration?.() ?? 0
     }
 
-    // Preload is less effective with IFrame API than direct audio, 
-    // but we can "cue" the next video to speed up loading.
-    preload(videoId: string) {
-        // Selective implementation: don't interrupt current playback
-    }
+    preload(videoId: string) { }
 
-    // EQ and Profiling are not possible with IFrame API (no MediaElementSource)
-    setBassBoost(value: number) {}
-    setSoundProfile(profile: "balanced" | "enhanced") {}
+    setBassBoost(value: number) { }
+
+    setSoundProfile(profile: "balanced" | "enhanced") { }
 }
 
 export const audioEngine = new AudioEngine()
