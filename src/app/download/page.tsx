@@ -4,73 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Download, Smartphone, Monitor, QrCode, Check, Share2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-
-// ── Minimal QR Code Generator (no dependencies) ──
-// Uses a simplified QR encoding that creates a visual QR-like pattern
-function generateQRSVG(text: string, size: number = 200): string {
-    const modules = 25;
-    const cellSize = size / modules;
-    
-    // Simple hash function to generate deterministic pattern from text
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-        const char = text.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    
-    // Generate module grid based on text hash
-    const grid: boolean[][] = Array(modules).fill(null).map(() => Array(modules).fill(false));
-    
-    // Finder patterns (3 corners)
-    const setFinderPattern = (startRow: number, startCol: number) => {
-        for (let r = 0; r < 7; r++) {
-            for (let c = 0; c < 7; c++) {
-                if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
-                    grid[startRow + r][startCol + c] = true;
-                }
-            }
-        }
-    };
-    setFinderPattern(0, 0);
-    setFinderPattern(0, modules - 7);
-    setFinderPattern(modules - 7, 0);
-    
-    // Data modules from hash
-    let seed = Math.abs(hash);
-    for (let r = 0; r < modules; r++) {
-        for (let c = 0; c < modules; c++) {
-            if (grid[r][c]) continue;
-            // Skip finder pattern areas + quiet zones
-            if ((r < 9 && c < 9) || (r < 9 && c > modules - 9) || (r > modules - 9 && c < 9)) continue;
-            seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-            grid[r][c] = (seed % 3) === 0;
-        }
-    }
-    
-    // Timing patterns
-    for (let i = 8; i < modules - 8; i++) {
-        grid[6][i] = i % 2 === 0;
-        grid[i][6] = i % 2 === 0;
-    }
-    
-    let paths = '';
-    for (let r = 0; r < modules; r++) {
-        for (let c = 0; c < modules; c++) {
-            if (grid[r][c]) {
-                const x = c * cellSize;
-                const y = r * cellSize;
-                const rx = cellSize * 0.15; // rounded corners
-                paths += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="${rx}" />`;
-            }
-        }
-    }
-    
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-        <rect width="${size}" height="${size}" fill="white" rx="12"/>
-        <g fill="#06080d">${paths}</g>
-    </svg>`;
-}
+import QRCode from "qrcode";
 
 interface BeforeInstallPromptEvent extends Event {
     prompt(): Promise<void>;
@@ -82,6 +16,7 @@ export default function DownloadPage() {
     const [justInstalled, setJustInstalled] = useState(false);
     const [hasMounted, setHasMounted] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
+    const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
     useEffect(() => {
         setHasMounted(true);
@@ -102,15 +37,25 @@ export default function DownloadPage() {
         return window.location.origin;
     }, [hasMounted]);
 
+    useEffect(() => {
+        if (appUrl) {
+            QRCode.toDataURL(appUrl, {
+                margin: 2,
+                scale: 10,
+                color: {
+                    dark: "#06080d",
+                    light: "#ffffff"
+                }
+            })
+            .then(url => setQrDataUrl(url))
+            .catch(err => console.error("QR Code Error:", err));
+        }
+    }, [appUrl]);
+
     const isMobile = useMemo(() => {
         if (!hasMounted) return false;
         return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     }, [hasMounted]);
-
-    const qrDataUrl = useMemo(() => {
-        if (!appUrl) return "";
-        return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(appUrl)}&bgcolor=FFFFFF&color=06080d&margin=10`;
-    }, [appUrl]);
 
     const handleInstall = useCallback(async () => {
         if (!installPrompt) return;
@@ -241,10 +186,7 @@ export default function DownloadPage() {
                                 height={180} 
                                 unoptimized 
                                 alt={`QR code for ${appUrl}`} 
-                                className="w-[180px] h-[180px] opacity-100 transition-opacity duration-300"
-                                onLoad={(e) => {
-                                    (e.target as HTMLImageElement).classList.remove('opacity-0');
-                                }}
+                                className="w-[180px] h-[180px]"
                             />
                         ) : (
                             <div className="w-[180px] h-[180px] animate-pulse rounded-xl bg-black/5" />
@@ -269,7 +211,7 @@ export default function DownloadPage() {
             </div>
 
             {/* Features */}
-            <div className="mt-12 grid grid-cols-3 gap-4">
+            <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
                     { label: "Offline Ready", desc: "Works without internet" },
                     { label: "Background Play", desc: "Music keeps playing" },

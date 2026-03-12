@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Compass, Download, Heart, Home, Search } from "lucide-react";
+import { MobileNav } from "./MobileNav";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -39,7 +40,8 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="fixed bottom-28 left-3 top-3 z-30 flex w-[4.5rem] flex-col rounded-[28px] shell-panel p-2.5 md:hidden">
+      <MobileNav />
+      <aside className="fixed bottom-28 left-3 top-3 z-30 hidden w-[4.5rem] flex-col rounded-[28px] shell-panel p-2.5 sm:flex md:hidden">
         <div className="flex justify-center pb-3">
           <BrandMark compact />
         </div>

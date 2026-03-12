@@ -49,9 +49,9 @@ export default function RootLayout({
         <AuthProvider>
           <LibraryStoreHydrator />
           <SplashScreen />
-          <div className="relative min-h-screen pb-28">
+          <div className="relative min-h-screen pb-40 sm:pb-28">
             <Sidebar />
-            <div className="relative min-h-screen pl-[5.5rem] md:pl-[20.75rem]">
+            <div className="relative min-h-screen pl-0 sm:pl-[5.5rem] md:pl-[20.75rem]">
               <div className="pointer-events-none absolute inset-0 ambient-grid opacity-45" />
               <div className="relative z-10 flex min-h-screen flex-col">
                 <TopNav />

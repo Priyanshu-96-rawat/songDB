@@ -609,7 +609,11 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
         },
 
         prefetchNextTrack: () => {
-            // No-op: YouTube IFrame API doesn't support preloading another video
+            const { queue, upNextTracks, autoplayEnabled } = get();
+            const nextTrack = queue[0] ?? (autoplayEnabled ? upNextTracks[0] : null);
+            if (nextTrack) {
+                audioEngine.preload(nextTrack.videoId);
+            }
         },
     };
 });

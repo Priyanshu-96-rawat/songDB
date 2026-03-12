@@ -257,10 +257,32 @@ export default function YoutubePlayer() {
     }
 
     useEffect(() => {
-        // YouTube IFrame API doesn't expose buffer ranges
-        // Buffer visualization is not available with this approach
-        setBufferedPercent(0);
-    }, [currentTrack?.videoId]);
+        const audio = audioEngine.audio;
+        if (!audio) return;
+
+        const syncBuffered = () => {
+            const effectiveDuration = currentDuration || audio.duration;
+            if (!Number.isFinite(effectiveDuration) || effectiveDuration <= 0 || !audio.buffered?.length) {
+                setBufferedPercent(0);
+                return;
+            }
+
+            try {
+                const end = audio.buffered.end(audio.buffered.length - 1);
+                setBufferedPercent(Math.min((end / effectiveDuration) * 100, 100));
+            } catch {
+                setBufferedPercent(0);
+            }
+        };
+
+        syncBuffered();
+        audio.addEventListener("progress", syncBuffered);
+        audio.addEventListener("loadedmetadata", syncBuffered);
+        return () => {
+            audio.removeEventListener("progress", syncBuffered);
+            audio.removeEventListener("loadedmetadata", syncBuffered);
+        };
+    }, [currentDuration, currentTrack?.videoId]);
 
     useEffect(() => {
         if (!expanded || expandedTab !== "lyrics" || activeLyricIndex < 0) return;
@@ -547,7 +569,7 @@ export default function YoutubePlayer() {
                 )}
             </AnimatePresence>
 
-            <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} transition={{ type: "spring", damping: 28, stiffness: 320 }} className="fixed bottom-0 left-0 right-0 z-[55] glass-player select-none" data-testid="player-bar" data-track-id={currentTrack.videoId} data-playback-state={isLoading ? "loading" : isPlaying ? "playing" : "paused"} data-progress-seconds={Math.floor(progress)} data-duration-seconds={Math.floor(currentDuration)}>
+            <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} transition={{ type: "spring", damping: 28, stiffness: 320 }} className="fixed bottom-16 left-0 right-0 z-[55] glass-player select-none sm:bottom-0" data-testid="player-bar" data-track-id={currentTrack.videoId} data-playback-state={isLoading ? "loading" : isPlaying ? "playing" : "paused"} data-progress-seconds={Math.floor(progress)} data-duration-seconds={Math.floor(currentDuration)}>
                 <div className="px-3 pt-2 md:px-4">
                     <WaveProgressBar
                         compact

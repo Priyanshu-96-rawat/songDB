@@ -1,232 +1,179 @@
 import { useYouTubePlayerStore } from "@/store/youtubePlayer"
 
-// ─── YouTube IFrame API type declarations ────────────────────────────
-
-declare global {
-    interface Window {
-        YT: typeof YT
-        onYouTubeIframeAPIReady: (() => void) | undefined
-    }
-}
-
-declare namespace YT {
-    enum PlayerState {
-        UNSTARTED = -1,
-        ENDED = 0,
-        PLAYING = 1,
-        PAUSED = 2,
-        BUFFERING = 3,
-        CUED = 5,
-    }
-
-    interface PlayerOptions {
-        height?: string | number
-        width?: string | number
-        videoId?: string
-        playerVars?: Record<string, unknown>
-        events?: {
-            onReady?: (event: PlayerEvent) => void
-            onStateChange?: (event: OnStateChangeEvent) => void
-            onError?: (event: OnErrorEvent) => void
-        }
-    }
-
-    interface PlayerEvent {
-        target: Player
-    }
-
-    interface OnStateChangeEvent {
-        target: Player
-        data: PlayerState
-    }
-
-    interface OnErrorEvent {
-        target: Player
-        data: number
-    }
-
-    class Player {
-        constructor(elementId: string | HTMLElement, options: PlayerOptions)
-        loadVideoById(videoId: string, startSeconds?: number): void
-        cueVideoById(videoId: string, startSeconds?: number): void
-        playVideo(): void
-        pauseVideo(): void
-        stopVideo(): void
-        seekTo(seconds: number, allowSeekAhead?: boolean): void
-        setVolume(volume: number): void
-        getVolume(): number
-        mute(): void
-        unMute(): void
-        isMuted(): boolean
-        getCurrentTime(): number
-        getDuration(): number
-        getPlayerState(): PlayerState
-        destroy(): void
-    }
-}
-
-// ─── AudioEngine (YouTube IFrame Player) ─────────────────────────────
+// ─── AudioEngine (HTML5 Audio + Web Audio API) ──────────────────────
 
 class AudioEngine {
-    private player: YT.Player | null = null
-    private isApiReady = false
-    private pendingVideoId: string | null = null
+    private _audio: HTMLAudioElement | null = null
+    private _preloadAudio: HTMLAudioElement | null = null
+    private audioContext: AudioContext | null = null
+    private sourceNode: MediaElementAudioSourceNode | null = null
+    private gainNode: GainNode | null = null
+    private bassFilter: BiquadFilterNode | null = null
     private progressInterval: ReturnType<typeof setInterval> | null = null
-    private isPlayerReady = false
-    private currentVolume = 100 // YT uses 0-100
+    private retryCount = 0
+    private maxRetries = 2
+    private currentVideoId: string | null = null
 
     constructor() {
         if (typeof window !== "undefined") {
-            this.loadIframeApi()
+            this.initAudio()
         }
     }
 
-    // ── Fake `audio` accessor for backward compatibility ──
-    // The store accesses `audioEngine.audio.currentTime` in a few places
-    get audio(): { currentTime: number; duration: number } {
-        return {
-            currentTime: this.getCurrentTime(),
-            duration: this.getDuration(),
-        }
+    get audio(): HTMLAudioElement | null {
+        return this._audio
     }
 
-    // ── Load the YouTube IFrame API script ──
-    private loadIframeApi() {
-        if (typeof window === "undefined") return
-        if (window.YT && window.YT.Player) {
-            this.isApiReady = true
-            this.initPlayer()
-            return
-        }
+    // ── Initialize the primary audio element ──
+    private initAudio() {
+        if (this._audio) return
 
-        // Set the global callback
-        window.onYouTubeIframeAPIReady = () => {
-            this.isApiReady = true
-            this.initPlayer()
-        }
+        this._audio = new Audio()
+        this._audio.crossOrigin = "anonymous"
+        this._audio.preload = "auto"
+        this._audio.volume = 1
 
-        // Inject the script if not already present
-        if (!document.getElementById("yt-iframe-api-script")) {
-            const script = document.createElement("script")
-            script.id = "yt-iframe-api-script"
-            script.src = "https://www.youtube.com/iframe_api"
-            script.async = true
-            document.head.appendChild(script)
-        }
+        this.bindEvents(this._audio)
     }
 
-    // ── Create the hidden YT.Player instance ──
-    private initPlayer() {
-        if (!this.isApiReady || typeof window === "undefined") return
-        if (this.player) return
+    // ── Bind all HTML5 audio events ──
+    private bindEvents(audio: HTMLAudioElement) {
+        audio.addEventListener("play", () => {
+            useYouTubePlayerStore.setState({ isPlaying: true, isLoading: false })
+            this.startProgressUpdates()
+        })
 
-        // Create a hidden container for the iframe
-        let container = document.getElementById("yt-iframe-player")
-        if (!container) {
-            container = document.createElement("div")
-            container.id = "yt-iframe-player"
-            container.style.position = "fixed"
-            container.style.top = "-9999px"
-            container.style.left = "-9999px"
-            container.style.width = "1px"
-            container.style.height = "1px"
-            container.style.opacity = "0"
-            container.style.pointerEvents = "none"
-            document.body.appendChild(container)
-        }
+        audio.addEventListener("playing", () => {
+            useYouTubePlayerStore.setState({ isPlaying: true, isLoading: false })
+        })
 
-        this.player = new window.YT.Player("yt-iframe-player", {
-            height: "1",
-            width: "1",
-            playerVars: {
-                autoplay: 0,
-                controls: 0,
-                disablekb: 1,
-                fs: 0,
-                iv_load_policy: 3, // No annotations
-                modestbranding: 1,
-                rel: 0,
-                playsinline: 1,
-                origin: window.location.origin,
-            },
-            events: {
-                onReady: (event) => {
-                    this.isPlayerReady = true
-                    event.target.setVolume(this.currentVolume)
-                    // If there's a pending video, play it now
-                    if (this.pendingVideoId) {
-                        const vid = this.pendingVideoId
-                        this.pendingVideoId = null
-                        this.play(vid)
-                    }
-                },
-                onStateChange: (event) => this.handleStateChange(event),
-                onError: (event) => this.handleError(event),
-            },
+        audio.addEventListener("pause", () => {
+            useYouTubePlayerStore.setState({ isPlaying: false })
+            this.stopProgressUpdates()
+        })
+
+        audio.addEventListener("waiting", () => {
+            useYouTubePlayerStore.setState({ isLoading: true })
+        })
+
+        audio.addEventListener("canplay", () => {
+            useYouTubePlayerStore.setState({ isLoading: false })
+        })
+
+        audio.addEventListener("loadedmetadata", () => {
+            if (audio.duration && isFinite(audio.duration)) {
+                useYouTubePlayerStore.setState({ duration: audio.duration })
+            }
+        })
+
+        audio.addEventListener("timeupdate", () => {
+            if (audio.currentTime !== undefined && !isNaN(audio.currentTime)) {
+                useYouTubePlayerStore.setState({ progress: audio.currentTime })
+            }
+        })
+
+        audio.addEventListener("ended", () => {
+            useYouTubePlayerStore.setState({ isPlaying: false, isLoading: false })
+            this.stopProgressUpdates()
+            const { handleTrackEnded } = useYouTubePlayerStore.getState()
+            handleTrackEnded()
+        })
+
+        audio.addEventListener("error", () => {
+            this.handleError()
+        })
+
+        audio.addEventListener("stalled", () => {
+            // Only treat as error if we've been stalled for too long
+            setTimeout(() => {
+                if (audio.readyState < 2 && this.retryCount < this.maxRetries) {
+                    this.handleError()
+                }
+            }, 5000)
         })
     }
 
-    // ── State change handler ──
-    private handleStateChange(event: YT.OnStateChangeEvent) {
-        const state = event.data
+    // ── Error handler with retry logic ──
+    private handleError() {
+        if (this.retryCount < this.maxRetries && this.currentVideoId) {
+            this.retryCount++
+            console.warn(`[AudioEngine] Stream error, retrying (${this.retryCount}/${this.maxRetries})...`)
 
-        switch (state) {
-            case YT.PlayerState.PLAYING:
-                useYouTubePlayerStore.setState({ isPlaying: true, isLoading: false })
-                this.startProgressUpdates()
-                // Update duration when playing starts
-                this.updateDuration()
-                break
+            const videoId = this.currentVideoId
+            const delay = this.retryCount * 1500 // 1.5s, 3s backoff
 
-            case YT.PlayerState.PAUSED:
-                useYouTubePlayerStore.setState({ isPlaying: false, isLoading: false })
-                this.stopProgressUpdates()
-                break
+            setTimeout(() => {
+                // Only retry if we're still on the same track
+                if (this.currentVideoId === videoId && this._audio) {
+                    const url = `/api/youtube-stream?id=${videoId}&retry=${this.retryCount}`
+                    this._audio.src = url
+                    this._audio.load()
+                    this._audio.play().catch(() => {
+                        // If still failing, let the next error handler deal with it
+                    })
+                }
+            }, delay)
+        } else {
+            console.error("[AudioEngine] Stream failed after retries")
+            useYouTubePlayerStore.setState({
+                isPlaying: false,
+                isLoading: false,
+                error: "Unable to play this track. The stream may be unavailable.",
+            })
 
-            case YT.PlayerState.BUFFERING:
-                useYouTubePlayerStore.setState({ isLoading: true })
-                break
-
-            case YT.PlayerState.ENDED:
-                useYouTubePlayerStore.setState({ isPlaying: false, isLoading: false })
-                this.stopProgressUpdates()
-                const { handleTrackEnded } = useYouTubePlayerStore.getState()
-                handleTrackEnded()
-                break
-
-            case YT.PlayerState.CUED:
-                useYouTubePlayerStore.setState({ isLoading: false })
-                break
+            // Auto-skip to next track after showing error briefly
+            setTimeout(() => {
+                const { nextTrack, error } = useYouTubePlayerStore.getState()
+                if (error) {
+                    nextTrack()
+                }
+            }, 3000)
         }
     }
 
-    // ── Error handler ──
-    private handleError(event: YT.OnErrorEvent) {
-        console.error("[YT IFrame] Error code:", event.data)
-        useYouTubePlayerStore.setState({
-            isPlaying: false,
-            isLoading: false,
-            error: `YouTube error (code ${event.data})`,
-        })
+    // ── Web Audio API setup for EQ ──
+    private initWebAudio() {
+        if (this.audioContext || !this._audio) return
 
-        // Auto-skip to next track on error
-        const { nextTrack } = useYouTubePlayerStore.getState()
-        setTimeout(() => nextTrack(), 1500)
+        try {
+            this.audioContext = new AudioContext()
+            this.sourceNode = this.audioContext.createMediaElementSource(this._audio)
+
+            // Bass boost filter
+            this.bassFilter = this.audioContext.createBiquadFilter()
+            this.bassFilter.type = "lowshelf"
+            this.bassFilter.frequency.value = 200
+            this.bassFilter.gain.value = 0
+
+            // Master gain
+            this.gainNode = this.audioContext.createGain()
+            this.gainNode.gain.value = 1
+
+            // Chain: source → bass → gain → destination
+            this.sourceNode.connect(this.bassFilter)
+            this.bassFilter.connect(this.gainNode)
+            this.gainNode.connect(this.audioContext.destination)
+        } catch (e) {
+            console.warn("[AudioEngine] Web Audio API init failed:", e)
+            // Fallback: connect directly if Web Audio fails
+            if (this.sourceNode && this.audioContext) {
+                try {
+                    this.sourceNode.connect(this.audioContext.destination)
+                } catch {
+                    // Ignore — audio will still play without EQ
+                }
+            }
+        }
     }
 
-    // ── Progress tracking via polling ──
+    // ── Progress updates ──
     private startProgressUpdates() {
         this.stopProgressUpdates()
         this.progressInterval = setInterval(() => {
-            if (!this.player || !this.isPlayerReady) return
-            try {
-                const currentTime = this.player.getCurrentTime()
-                if (typeof currentTime === "number" && !isNaN(currentTime)) {
-                    // Directly set state to avoid seek loop in setProgress
-                    useYouTubePlayerStore.setState({ progress: currentTime })
-                }
-            } catch {
-                // Player might not be ready
+            if (!this._audio) return
+            const t = this._audio.currentTime
+            if (typeof t === "number" && !isNaN(t)) {
+                useYouTubePlayerStore.setState({ progress: t })
             }
         }, 250)
     }
@@ -238,89 +185,132 @@ class AudioEngine {
         }
     }
 
-    private updateDuration() {
-        if (!this.player || !this.isPlayerReady) return
-        try {
-            const dur = this.player.getDuration()
-            if (dur && dur > 0 && !isNaN(dur)) {
-                useYouTubePlayerStore.setState({ duration: dur })
-            }
-        } catch {
-            // Ignore
-        }
-    }
-
-    // ── Public API (same interface as before) ──
+    // ── Public API ──
 
     getCurrentTime(): number {
-        if (!this.player || !this.isPlayerReady) return 0
-        try {
-            return this.player.getCurrentTime() ?? 0
-        } catch {
-            return 0
-        }
+        return this._audio?.currentTime ?? 0
     }
 
     getDuration(): number {
-        if (!this.player || !this.isPlayerReady) return 0
-        try {
-            return this.player.getDuration() ?? 0
-        } catch {
-            return 0
-        }
+        const d = this._audio?.duration
+        return d && isFinite(d) ? d : 0
     }
 
     play(videoId: string) {
         if (typeof window === "undefined") return
+        if (!this._audio) this.initAudio()
+        if (!this._audio) return
 
-        if (!this.isPlayerReady || !this.player) {
-            // Queue it for when the player is ready
-            this.pendingVideoId = videoId
-            this.loadIframeApi()
+        this.retryCount = 0
+        this.currentVideoId = videoId
+
+        // Init Web Audio on first play (requires user gesture)
+        if (!this.audioContext) {
+            this.initWebAudio()
+        } else if (this.audioContext.state === "suspended") {
+            this.audioContext.resume().catch(() => {})
+        }
+
+        // Check if preloaded audio matches
+        if (this._preloadAudio && this._preloadAudio.src.includes(`id=${videoId}`)) {
+            // Swap preloaded audio in
+            this.stopProgressUpdates()
+
+            // Transfer Web Audio source if needed
+            if (this.sourceNode && this.audioContext) {
+                try { this.sourceNode.disconnect() } catch {}
+                this.sourceNode = this.audioContext.createMediaElementSource(this._preloadAudio)
+                if (this.bassFilter) {
+                    this.sourceNode.connect(this.bassFilter)
+                } else {
+                    this.sourceNode.connect(this.audioContext.destination)
+                }
+            }
+
+            // Rebind events
+            this._audio.pause()
+            this._audio.removeAttribute("src")
+            this._audio = this._preloadAudio
+            this._preloadAudio = null
+            this.bindEvents(this._audio)
+
+            this._audio.play().catch(() => {})
             return
         }
 
-        this.player.loadVideoById(videoId)
-        this.player.setVolume(this.currentVolume)
+        const url = `/api/youtube-stream?id=${videoId}`
+        this._audio.src = url
+        this._audio.load()
+        this._audio.play().catch(() => {
+            // Autoplay may be blocked — user interaction needed
+            console.warn("[AudioEngine] Autoplay blocked, waiting for user gesture")
+        })
     }
 
-    preload(_videoId: string) {
-        // YouTube IFrame API does not support preloading another video
-        // This is a no-op
+    preload(videoId: string) {
+        if (typeof window === "undefined") return
+        if (this.currentVideoId === videoId) return
+
+        // Cleanup existing preload
+        if (this._preloadAudio) {
+            this._preloadAudio.pause()
+            this._preloadAudio.removeAttribute("src")
+            this._preloadAudio.load()
+        }
+
+        this._preloadAudio = new Audio()
+        this._preloadAudio.crossOrigin = "anonymous"
+        this._preloadAudio.preload = "auto"
+        this._preloadAudio.src = `/api/youtube-stream?id=${videoId}`
+        this._preloadAudio.load()
     }
 
     pause() {
-        if (!this.player || !this.isPlayerReady) return
-        this.player.pauseVideo()
+        this._audio?.pause()
     }
 
     resume() {
         if (typeof window === "undefined") return
 
-        if (!this.player || !this.isPlayerReady) return
-        this.player.playVideo()
+        if (this.audioContext?.state === "suspended") {
+            this.audioContext.resume().catch(() => {})
+        }
+
+        this._audio?.play().catch(() => {})
     }
 
     seek(time: number) {
-        if (!this.player || !this.isPlayerReady) return
-        this.player.seekTo(time, true)
-    }
-
-    setVolume(volume: number) {
-        // Store uses 0-1, YT uses 0-100
-        this.currentVolume = Math.round(volume * 100)
-        if (this.player && this.isPlayerReady) {
-            this.player.setVolume(this.currentVolume)
+        if (!this._audio) return
+        try {
+            this._audio.currentTime = time
+        } catch {
+            // Seek may fail if media isn't loaded yet
         }
     }
 
-    // These are no-ops with YouTube IFrame API (no access to audio nodes)
-    setBassBoost(_value: number) {
-        // Not supported with YouTube IFrame API
+    setVolume(volume: number) {
+        // Store uses 0-1 range
+        if (this._audio) {
+            this._audio.volume = Math.max(0, Math.min(1, volume))
+        }
     }
 
-    setSoundProfile(_profile: "balanced" | "enhanced") {
-        // Not supported with YouTube IFrame API
+    setBassBoost(value: number) {
+        if (this.bassFilter) {
+            this.bassFilter.gain.value = value
+        }
+    }
+
+    setSoundProfile(profile: "balanced" | "enhanced") {
+        if (!this.gainNode || !this.bassFilter) return
+
+        if (profile === "enhanced") {
+            this.bassFilter.gain.value = Math.max(this.bassFilter.gain.value, 3)
+            this.gainNode.gain.value = 1.08
+        } else {
+            this.bassFilter.gain.value = 0
+            this.gainNode.gain.value = 1
+        }
     }
 }
 
