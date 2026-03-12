@@ -17,14 +17,58 @@ export type ResolvedAudioStream = {
 
 let playerClient: Innertube | null = null;
 
+function getYouTubeCookies(): string | undefined {
+    const raw = process.env.YT_COOKIES;
+    if (!raw) {
+        console.warn('[yt-dlp] YT_COOKIES env var not set — running without authentication (may be rate-limited)');
+        return undefined;
+    }
+
+    // If it looks like a Netscape cookie file (tab-separated lines), parse it
+    if (raw.includes('\t')) {
+        const pairs: string[] = [];
+        for (const line of raw.split(/\r?\n/)) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+            const fields = trimmed.split('\t');
+            // Netscape format: domain, flag, path, secure, expiry, name, value
+            if (fields.length >= 7) {
+                const name = fields[5];
+                const value = fields[6];
+                if (name && value) {
+                    pairs.push(`${name}=${value}`);
+                }
+            }
+        }
+        if (pairs.length > 0) {
+            console.log(`[yt-dlp] Parsed ${pairs.length} cookies from Netscape format`);
+            return pairs.join('; ');
+        }
+    }
+
+    // Otherwise assume it's already a browser-style cookie string
+    return raw;
+}
+
 async function getPlayerClient(): Promise<Innertube> {
     if (!playerClient) {
-        playerClient = await Innertube.create({
+        const cookies = getYouTubeCookies();
+        const options: Parameters<typeof Innertube.create>[0] = {
             lang: 'en',
             location: 'US',
             retrieve_player: true,
             generate_session_locally: true,
-        });
+        };
+
+        // Pass cookies for authenticated session if available
+        if (cookies) {
+            (options as Record<string, unknown>).cookie = cookies;
+            console.log('[yt-dlp] Innertube client initialized WITH cookie authentication');
+        } else {
+            console.log('[yt-dlp] Innertube client initialized WITHOUT authentication');
+        }
+
+        playerClient = await Innertube.create(options);
     }
     return playerClient;
 }
