@@ -13,69 +13,28 @@ export type ResolvedAudioStream = {
     container: string | null;
 };
 
-// ─── Singleton Innertube Client (with player for stream deciphering) ─
+// ─── Instance Lists (rotated on failure) ─────────────────────────────
 
-let playerClient: Innertube | null = null;
+const PIPED_INSTANCES = [
+    'https://pipedapi.kavin.rocks',
+    'https://pipedapi.adminforge.de',
+    'https://api.piped.projectsegfau.lt',
+    'https://pipedapi.in.projectsegfau.lt',
+];
 
-function getYouTubeCookies(): string | undefined {
-    const raw = process.env.YT_COOKIES;
-    if (!raw) {
-        console.warn('[yt-dlp] YT_COOKIES env var not set — running without authentication (may be rate-limited)');
-        return undefined;
-    }
+const INVIDIOUS_INSTANCES = [
+    'https://invidious.jing.rocks',
+    'https://inv.tux.digital',
+    'https://invidious.nerdvpn.de',
+    'https://yewtu.be',
+];
 
-    // If it looks like a Netscape cookie file (tab-separated lines), parse it
-    if (raw.includes('\t')) {
-        const pairs: string[] = [];
-        for (const line of raw.split(/\r?\n/)) {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed.startsWith('#')) continue;
-            const fields = trimmed.split('\t');
-            // Netscape format: domain, flag, path, secure, expiry, name, value
-            if (fields.length >= 7) {
-                const name = fields[5];
-                const value = fields[6];
-                if (name && value) {
-                    pairs.push(`${name}=${value}`);
-                }
-            }
-        }
-        if (pairs.length > 0) {
-            console.log(`[yt-dlp] Parsed ${pairs.length} cookies from Netscape format`);
-            return pairs.join('; ');
-        }
-    }
-
-    // Otherwise assume it's already a browser-style cookie string
-    return raw;
-}
-
-async function getPlayerClient(): Promise<Innertube> {
-    if (!playerClient) {
-        const cookies = getYouTubeCookies();
-        const options: Parameters<typeof Innertube.create>[0] = {
-            lang: 'en',
-            location: 'US',
-            retrieve_player: true,
-            generate_session_locally: true,
-        };
-
-        // Pass cookies for authenticated session if available
-        if (cookies) {
-            (options as Record<string, unknown>).cookie = cookies;
-            console.log('[yt-dlp] Innertube client initialized WITH cookie authentication');
-        } else {
-            console.log('[yt-dlp] Innertube client initialized WITHOUT authentication');
-        }
-
-        playerClient = await Innertube.create(options);
-    }
-    return playerClient;
-}
+let pipedIndex = 0;
+let invidiousIndex = 0;
 
 // ─── Caches ──────────────────────────────────────────────────────────
 
-const STREAM_CACHE_TTL_MS = 8 * 60 * 1000; // 8 minutes (YouTube URLs expire in ~6h but refresh often)
+const STREAM_CACHE_TTL_MS = 8 * 60 * 1000;
 const streamCache = new Map<string, { value: ResolvedAudioStream; cachedAt: number }>();
 
 // ─── Helpers ─────────────────────────────────────────────────────────
@@ -92,98 +51,245 @@ function parseExpiresAt(url: string): number | null {
     }
 }
 
-// ─── Stream Extraction via youtubei.js ───────────────────────────────
-
-async function extractAudioStream(videoId: string): Promise<ResolvedAudioStream> {
-    const yt = await getPlayerClient();
-
-    // getBasicInfo fetches video info including streaming data with deciphered URLs
-    const info = await yt.getBasicInfo(videoId);
-
-    const streamingData = info.streaming_data;
-    if (!streamingData) {
-        // Reset client in case of stale player tokens
-        playerClient = null;
-        throw new Error(`No streaming data available for video ${videoId}. Player may need refresh.`);
-    }
-
-    const adaptiveFormats = streamingData.adaptive_formats ?? [];
-
-    // Filter to audio-only formats that have a URL
-    type ScoredFormat = {
-        url: string;
-        mimeType: string;
-        bitrate: number;
-        codec: string;
-        container: string;
-        sampleRate: number;
-        channels: number;
-    };
-
-    const audioFormats: ScoredFormat[] = [];
-
-    for (const fmt of adaptiveFormats) {
-        // Only audio formats
-        if (fmt.has_video) continue;
-        if (!fmt.has_audio) continue;
-
-        // Access the deciphered URL - youtubei.js provides it after deciphering
-        const fmtRaw = fmt as unknown as Record<string, unknown>;
-        const url = fmtRaw.url as string | undefined;
-        if (!url) continue;
-
-        const rawMime = (fmtRaw.mime_type as string) ?? 'audio/webm; codecs="opus"';
-        const mimeBase = rawMime.split(';')[0] ?? 'audio/webm';
-        const codecMatch = rawMime.match(/codecs="?([^"]*)"?/);
-        const codec = codecMatch?.[1] ?? 'unknown';
-        const container = mimeBase.split('/')[1] ?? 'webm';
-
-        audioFormats.push({
-            url,
-            mimeType: mimeBase,
-            bitrate: (fmtRaw.bitrate as number) ?? (fmtRaw.average_bitrate as number) ?? 0,
-            codec,
-            container,
-            sampleRate: Number.parseInt(String(fmtRaw.audio_sample_rate ?? '0'), 10),
-            channels: (fmtRaw.audio_channels as number) ?? 2,
+async function fetchWithTimeout(url: string, timeoutMs = 10000): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const res = await fetch(url, {
+            signal: controller.signal,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+            cache: 'no-store',
         });
+        return res;
+    } finally {
+        clearTimeout(timer);
     }
-
-    if (audioFormats.length === 0) {
-        throw new Error(`No audio formats found for video ${videoId}`);
-    }
-
-    // Score and pick the best format
-    const scored = audioFormats.map((f) => {
-        const codecRank = f.codec.includes('opus') ? 5
-            : f.codec.includes('vorbis') ? 4
-            : (f.codec.includes('mp4a') || f.codec.includes('aac')) ? 3
-            : 2;
-        const score = codecRank * 500 + f.bitrate / 100 + f.sampleRate / 1000 + f.channels * 20;
-        return { ...f, score };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-    const best = scored[0];
-
-    return {
-        url: best.url,
-        mimeType: best.mimeType,
-        requestHeaders: {
-            'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
-            'Accept': '*/*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Origin': 'https://www.youtube.com',
-            'Referer': 'https://www.youtube.com/',
-        },
-        expiresAt: parseExpiresAt(best.url),
-        bitrateKbps: best.bitrate > 0 ? Math.round(best.bitrate / 1000) : null,
-        audioCodec: best.codec !== 'unknown' ? best.codec : null,
-        container: best.container,
-    };
 }
 
-// ─── Public API ──────────────────────────────────────────────────────
+// ─── Strategy 1: Piped API ───────────────────────────────────────────
+
+type PipedAudioStream = {
+    url: string;
+    bitrate: number;
+    codec: string;
+    format: string;
+    mimeType: string;
+    quality: string;
+    videoOnly: boolean;
+};
+
+async function tryPiped(videoId: string): Promise<ResolvedAudioStream | null> {
+    for (let attempt = 0; attempt < PIPED_INSTANCES.length; attempt++) {
+        const instance = PIPED_INSTANCES[(pipedIndex + attempt) % PIPED_INSTANCES.length];
+        const url = `${instance}/streams/${videoId}`;
+        try {
+            console.log(`[stream] Trying Piped: ${instance}`);
+            const res = await fetchWithTimeout(url);
+            if (!res.ok) continue;
+
+            const data = await res.json() as { audioStreams?: PipedAudioStream[] };
+            const streams = (data.audioStreams ?? []).filter(
+                (s) => !s.videoOnly && s.url
+            );
+
+            if (streams.length === 0) continue;
+
+            // Pick highest bitrate
+            streams.sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0));
+            const best = streams[0];
+
+            // Rotate to next instance for load balancing
+            pipedIndex = (pipedIndex + attempt + 1) % PIPED_INSTANCES.length;
+
+            const mimeBase = best.mimeType?.split(';')[0] ?? `audio/${(best.format ?? 'webm').toLowerCase()}`;
+            return {
+                url: best.url,
+                mimeType: mimeBase,
+                requestHeaders: {},
+                expiresAt: parseExpiresAt(best.url),
+                bitrateKbps: best.bitrate > 0 ? Math.round(best.bitrate / 1000) : null,
+                audioCodec: best.codec ?? null,
+                container: (best.format ?? 'webm').toLowerCase(),
+            };
+        } catch (err) {
+            console.warn(`[stream] Piped ${instance} failed:`, err instanceof Error ? err.message : err);
+        }
+    }
+    return null;
+}
+
+// ─── Strategy 2: Invidious API ───────────────────────────────────────
+
+type InvidiousFormat = {
+    url: string;
+    type: string;
+    bitrate: string;
+    encoding: string;
+    itag: string;
+    container: string;
+    audioQuality?: string;
+    audioSampleRate?: number;
+    audioChannels?: number;
+};
+
+async function tryInvidious(videoId: string): Promise<ResolvedAudioStream | null> {
+    for (let attempt = 0; attempt < INVIDIOUS_INSTANCES.length; attempt++) {
+        const instance = INVIDIOUS_INSTANCES[(invidiousIndex + attempt) % INVIDIOUS_INSTANCES.length];
+        const url = `${instance}/api/v1/videos/${videoId}?fields=adaptiveFormats`;
+        try {
+            console.log(`[stream] Trying Invidious: ${instance}`);
+            const res = await fetchWithTimeout(url);
+            if (!res.ok) continue;
+
+            const data = await res.json() as { adaptiveFormats?: InvidiousFormat[] };
+            const audioFormats = (data.adaptiveFormats ?? []).filter(
+                (f) => f.type?.startsWith('audio') && f.url
+            );
+
+            if (audioFormats.length === 0) continue;
+
+            // Score by bitrate (string → number)
+            audioFormats.sort((a, b) => {
+                const bitrateA = Number.parseInt(a.bitrate ?? '0', 10);
+                const bitrateB = Number.parseInt(b.bitrate ?? '0', 10);
+                return bitrateB - bitrateA;
+            });
+            const best = audioFormats[0];
+
+            invidiousIndex = (invidiousIndex + attempt + 1) % INVIDIOUS_INSTANCES.length;
+
+            const mimeBase = best.type?.split(';')[0] ?? 'audio/webm';
+            const codecMatch = best.type?.match(/codecs="?([^"]*)"?/);
+            const codec = codecMatch?.[1] ?? best.encoding ?? null;
+            const container = best.container ?? mimeBase.split('/')[1] ?? 'webm';
+
+            return {
+                url: best.url,
+                mimeType: mimeBase,
+                requestHeaders: {},
+                expiresAt: parseExpiresAt(best.url),
+                bitrateKbps: best.bitrate ? Math.round(Number.parseInt(best.bitrate, 10) / 1000) : null,
+                audioCodec: codec,
+                container,
+            };
+        } catch (err) {
+            console.warn(`[stream] Invidious ${instance} failed:`, err instanceof Error ? err.message : err);
+        }
+    }
+    return null;
+}
+
+// ─── Strategy 3: youtubei.js (last resort) ───────────────────────────
+
+let playerClient: Innertube | null = null;
+
+function getYouTubeCookies(): string | undefined {
+    const raw = process.env.YT_COOKIES;
+    if (!raw) return undefined;
+
+    if (raw.includes('\t')) {
+        const pairs: string[] = [];
+        for (const line of raw.split(/\r?\n/)) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+            const fields = trimmed.split('\t');
+            if (fields.length >= 7) {
+                const name = fields[5];
+                const value = fields[6];
+                if (name && value) pairs.push(`${name}=${value}`);
+            }
+        }
+        if (pairs.length > 0) return pairs.join('; ');
+    }
+
+    return raw;
+}
+
+async function getPlayerClient(): Promise<Innertube> {
+    if (!playerClient) {
+        const cookies = getYouTubeCookies();
+        const options: Parameters<typeof Innertube.create>[0] = {
+            lang: 'en',
+            location: 'US',
+            retrieve_player: true,
+            generate_session_locally: true,
+        };
+
+        if (cookies) {
+            (options as Record<string, unknown>).cookie = cookies;
+            console.log('[stream] youtubei.js initialized WITH cookies');
+        }
+
+        playerClient = await Innertube.create(options);
+    }
+    return playerClient;
+}
+
+async function tryYoutubeiJs(videoId: string): Promise<ResolvedAudioStream | null> {
+    try {
+        console.log('[stream] Trying youtubei.js (last resort)');
+        const yt = await getPlayerClient();
+        const info = await yt.getBasicInfo(videoId);
+
+        const streamingData = info.streaming_data;
+        if (!streamingData) {
+            playerClient = null;
+            return null;
+        }
+
+        const adaptiveFormats = streamingData.adaptive_formats ?? [];
+        type ScoredFormat = {
+            url: string; mimeType: string; bitrate: number;
+            codec: string; container: string; sampleRate: number; channels: number;
+        };
+        const audioFormats: ScoredFormat[] = [];
+
+        for (const fmt of adaptiveFormats) {
+            if (fmt.has_video || !fmt.has_audio) continue;
+            const fmtRaw = fmt as unknown as Record<string, unknown>;
+            const url = fmtRaw.url as string | undefined;
+            if (!url) continue;
+
+            const rawMime = (fmtRaw.mime_type as string) ?? 'audio/webm; codecs="opus"';
+            const mimeBase = rawMime.split(';')[0] ?? 'audio/webm';
+            const codecMatch = rawMime.match(/codecs="?([^"]*)"?/);
+            const codec = codecMatch?.[1] ?? 'unknown';
+
+            audioFormats.push({
+                url, mimeType: mimeBase,
+                bitrate: (fmtRaw.bitrate as number) ?? (fmtRaw.average_bitrate as number) ?? 0,
+                codec, container: mimeBase.split('/')[1] ?? 'webm',
+                sampleRate: Number.parseInt(String(fmtRaw.audio_sample_rate ?? '0'), 10),
+                channels: (fmtRaw.audio_channels as number) ?? 2,
+            });
+        }
+
+        if (audioFormats.length === 0) return null;
+
+        audioFormats.sort((a, b) => b.bitrate - a.bitrate);
+        const best = audioFormats[0];
+
+        return {
+            url: best.url,
+            mimeType: best.mimeType,
+            requestHeaders: {
+                'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
+                'Origin': 'https://www.youtube.com',
+                'Referer': 'https://www.youtube.com/',
+            },
+            expiresAt: parseExpiresAt(best.url),
+            bitrateKbps: best.bitrate > 0 ? Math.round(best.bitrate / 1000) : null,
+            audioCodec: best.codec !== 'unknown' ? best.codec : null,
+            container: best.container,
+        };
+    } catch (err) {
+        console.error('[stream] youtubei.js failed:', err instanceof Error ? err.message : err);
+        playerClient = null;
+        return null;
+    }
+}
+
+// ─── Public API – Fallback Chain ─────────────────────────────────────
 
 export async function resolveAudioStream(videoId: string, forceRefresh = false): Promise<ResolvedAudioStream> {
     const cached = streamCache.get(videoId);
@@ -192,24 +298,34 @@ export async function resolveAudioStream(videoId: string, forceRefresh = false):
     if (!forceRefresh && cached) {
         const staleByTime = now - cached.cachedAt > STREAM_CACHE_TTL_MS;
         const staleByExpiry = cached.value.expiresAt !== null && cached.value.expiresAt - now < 60_000;
-
-        if (!staleByTime && !staleByExpiry) {
-            return cached.value;
-        }
+        if (!staleByTime && !staleByExpiry) return cached.value;
     }
 
-    let extracted: ResolvedAudioStream;
-    try {
-        extracted = await extractAudioStream(videoId);
-    } catch (err) {
-        // If extraction fails, reset client and retry once
-        console.error('[stream] First attempt failed, resetting client:', err);
-        playerClient = null;
-        extracted = await extractAudioStream(videoId);
+    // 1) Try Piped
+    const piped = await tryPiped(videoId);
+    if (piped) {
+        console.log(`[stream] ✓ Piped resolved for ${videoId}`);
+        streamCache.set(videoId, { value: piped, cachedAt: now });
+        return piped;
     }
 
-    streamCache.set(videoId, { value: extracted, cachedAt: now });
-    return extracted;
+    // 2) Try Invidious
+    const invidious = await tryInvidious(videoId);
+    if (invidious) {
+        console.log(`[stream] ✓ Invidious resolved for ${videoId}`);
+        streamCache.set(videoId, { value: invidious, cachedAt: now });
+        return invidious;
+    }
+
+    // 3) Last resort: youtubei.js with cookies
+    const ytjs = await tryYoutubeiJs(videoId);
+    if (ytjs) {
+        console.log(`[stream] ✓ youtubei.js resolved for ${videoId}`);
+        streamCache.set(videoId, { value: ytjs, cachedAt: now });
+        return ytjs;
+    }
+
+    throw new Error(`All stream sources failed for video ${videoId}`);
 }
 
 export function clearResolvedAudioStream(videoId: string) {
@@ -347,32 +463,21 @@ export async function resolveCaptionTranscript(
     const yt = await getPlayerClient();
     const info = await yt.getBasicInfo(videoId);
 
-    // Extract captions from the player response
     const infoRaw = info as unknown as Record<string, unknown>;
     const captions = (infoRaw.captions ?? (info as unknown as { player_response?: Record<string, unknown> }).player_response?.captions) as Record<string, unknown> | undefined;
     const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined;
     const captionTracks = (renderer?.captionTracks ?? []) as CaptionTrack[];
 
-    if (captionTracks.length === 0) {
-        return null;
-    }
+    if (captionTracks.length === 0) return null;
 
-    // Pick the best caption track by language preference
     let selected: CaptionTrack | null = null;
     for (const lang of preferredLanguages) {
         const match = captionTracks.find((t) => t.languageCode === lang);
-        if (match) {
-            selected = match;
-            break;
-        }
+        if (match) { selected = match; break; }
     }
-    if (!selected) {
-        selected = captionTracks[0];
-    }
-
+    if (!selected) selected = captionTracks[0];
     if (!selected?.baseUrl) return null;
 
-    // Fetch as json3 first, then fall back to vtt
     const json3Url = `${selected.baseUrl}&fmt=json3`;
     try {
         const response = await fetch(json3Url, {
@@ -384,7 +489,7 @@ export async function resolveCaptionTranscript(
             const result = parseJson3Transcript(text, selected.languageCode);
             if (result) return result;
         }
-    } catch { /* fall through to VTT */ }
+    } catch { /* fall through */ }
 
     const vttUrl = `${selected.baseUrl}&fmt=vtt`;
     try {
@@ -397,7 +502,7 @@ export async function resolveCaptionTranscript(
             return parseVttTranscript(text, selected.languageCode)
                 ?? createUnsyncedLyrics(text, 'captions', selected.languageCode);
         }
-    } catch { /* no captions available */ }
+    } catch { /* no captions */ }
 
     return null;
 }
