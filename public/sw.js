@@ -43,6 +43,12 @@ self.addEventListener('fetch', (event) => {
                 }
                 return response;
             })
-            .catch(() => caches.match(event.request))
+            .catch(async () => {
+                const cachedResponse = await caches.match(event.request);
+                return cachedResponse || new Response('Network error occurred', {
+                    status: 408,
+                    headers: { 'Content-Type': 'text/plain' },
+                });
+            })
     );
 });
