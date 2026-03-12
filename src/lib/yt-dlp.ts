@@ -1,41 +1,17 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import Innertube from 'youtubei.js';
 import { createUnsyncedLyrics, normalizeLyricText, type LyricLine, type TrackLyrics } from '@/lib/lyrics';
 
-const execFileAsync = promisify(execFile);
+// ─── Types ───────────────────────────────────────────────────────────
 
-type AudioFormat = {
-    url?: string;
-    acodec?: string;
-    vcodec?: string;
-    abr?: number;
-    tbr?: number;
-    ext?: string;
-    asr?: number;
-    audio_channels?: number;
-    format_id?: string;
-    format_note?: string;
-    mime_type?: string;
-    format?: string;
-    protocol?: string;
-    http_headers?: Record<string, string>;
-};
-
-type CaptionFormat = {
-    ext?: string;
-    url?: string;
-    name?: string;
-};
-
-type SelectedCaptionFormat = CaptionFormat & {
-    language: string;
-};
-
-type YtDlpPayload = {
-    requested_downloads?: AudioFormat[];
-    formats?: AudioFormat[];
-    subtitles?: Record<string, CaptionFormat[]>;
-    automatic_captions?: Record<string, CaptionFormat[]>;
+type AudioFormatInfo = {
+    url: string;
+    mimeType: string;
+    bitrate: number;
+    audioSampleRate: number;
+    audioChannels: number;
+    codec: string;
+    container: string;
+    contentLength: number;
 };
 
 export type ResolvedAudioStream = {
@@ -48,21 +24,33 @@ export type ResolvedAudioStream = {
     container: string | null;
 };
 
+// ─── Singleton Innertube Client (with player) ────────────────────────
+
+let playerClient: Innertube | null = null;
+
+async function getPlayerClient(): Promise<Innertube> {
+    if (!playerClient) {
+        playerClient = await Innertube.create({
+            lang: 'en',
+            location: 'US',
+            retrieve_player: true,
+        });
+    }
+    return playerClient;
+}
+
+// ─── Caches ──────────────────────────────────────────────────────────
+
 const STREAM_CACHE_TTL_MS = 10 * 60 * 1000;
 const streamCache = new Map<string, { value: ResolvedAudioStream; cachedAt: number }>();
-const metadataCache = new Map<string, { value: YtDlpPayload; cachedAt: number }>();
-const DEFAULT_CAPTION_LANGUAGE_ORDER = ['en', 'en-US', 'en-GB', 'hi', 'hi-IN'];
 
-function getVideoUrl(videoId: string) {
-    return `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
-}
+// ─── Helpers ─────────────────────────────────────────────────────────
 
 function parseExpiresAt(url: string): number | null {
     try {
         const parsed = new URL(url);
         const expire = parsed.searchParams.get('expire');
         if (!expire) return null;
-
         const unixMs = Number.parseInt(expire, 10) * 1000;
         return Number.isNaN(unixMs) ? null : unixMs;
     } catch {
@@ -70,176 +58,143 @@ function parseExpiresAt(url: string): number | null {
     }
 }
 
-function inferMimeType(format: AudioFormat): string {
-    const mime = format.mime_type;
-    if (mime) return mime.split(';')[0];
-
-    if (format.ext === 'm4a' || format.ext === 'mp4') return 'audio/mp4';
-    if (format.ext === 'webm') return 'audio/webm';
-    if (format.ext === 'mp3') return 'audio/mpeg';
-
-    return 'audio/webm';
-}
-
-function getCodecRank(acodec?: string): number {
-    const codec = (acodec ?? "").toLowerCase();
-    if (codec.includes("opus")) return 5;
-    if (codec.includes("vorbis")) return 4;
-    if (codec.includes("mp4a") || codec.includes("aac")) return 3;
-    if (codec.includes("mp3")) return 2;
+function getCodecRank(codec: string): number {
+    const c = codec.toLowerCase();
+    if (c.includes('opus')) return 5;
+    if (c.includes('vorbis')) return 4;
+    if (c.includes('mp4a') || c.includes('aac')) return 3;
+    if (c.includes('mp3')) return 2;
     return 1;
 }
 
-function getContainerRank(ext?: string): number {
-    switch ((ext ?? "").toLowerCase()) {
-        case "webm":
-            return 4;
-        case "m4a":
-        case "mp4":
-            return 3;
-        case "mp3":
-            return 2;
-        default:
-            return 1;
-    }
+function scoreFormat(f: AudioFormatInfo): number {
+    const codecRank = getCodecRank(f.codec);
+    return codecRank * 500 + f.bitrate / 100 + f.audioSampleRate / 1000 + f.audioChannels * 20;
 }
 
-function scoreAudioFormat(format: AudioFormat): number {
-    const bitrate = format.abr ?? format.tbr ?? 0;
-    const sampleRate = format.asr ?? 0;
-    const channels = format.audio_channels ?? 0;
-    const codecRank = getCodecRank(format.acodec);
-    const containerRank = getContainerRank(format.ext);
-    const descriptor = `${format.format_note ?? ""} ${format.format ?? ""} ${format.format_id ?? ""}`.toLowerCase();
-    const isAudioOnly = format.vcodec === "none" ? 1 : 0;
-    const hasDirectHttpStream = (format.protocol ?? "").startsWith("http") ? 1 : 0;
-    const drcPenalty = descriptor.includes("drc") ? 100 : 0;
+// ─── Stream Extraction via youtubei.js ───────────────────────────────
 
-    return (
-        isAudioOnly * 2000 + // Strongly prefer audio-only formats
-        hasDirectHttpStream * 500 + // Prefer direct HTTP streams
-        codecRank * 500 + // Heavily weight high-quality codecs (Opus > AAC)
-        bitrate * 50 + // Significantly increase bitrate weight
-        containerRank * 50 + // Prefer webm/m4a
-        (sampleRate / 1000) * 2 + // Slight preference for higher sample rates
-        channels * 20 - // Prefer stereo
-        drcPenalty // Heavily penalize DRC formats
-    );
-}
+async function extractAudioStream(videoId: string): Promise<ResolvedAudioStream> {
+    const yt = await getPlayerClient();
+    const info = await yt.getBasicInfo(videoId);
 
-function pickBestAudioFormat(payload: YtDlpPayload): AudioFormat | null {
-    const candidates = [...(payload.formats ?? []), ...(payload.requested_downloads ?? [])]
-        .filter((format) => format.url && format.acodec && format.acodec !== "none");
-
-    if (candidates.length === 0) {
-        return null;
+    const streamingData = info.streaming_data;
+    if (!streamingData) {
+        throw new Error(`No streaming data available for video ${videoId}`);
     }
 
-    const audioOnlyFormats = candidates.filter((format) => format.vcodec === "none");
-    const pool = audioOnlyFormats.length > 0 ? audioOnlyFormats : candidates;
+    // Collect all audio-only adaptive formats
+    const audioFormats: AudioFormatInfo[] = [];
+    const adaptiveFormats = streamingData.adaptive_formats ?? [];
 
-    // Sort by score descending and pick the top one
-    return pool.sort((a, b) => scoreAudioFormat(b) - scoreAudioFormat(a))[0] ?? null;
-}
+    for (const fmt of adaptiveFormats) {
+        // Skip video formats — we only want audio
+        if (fmt.has_video && !fmt.has_audio) continue;
+        if (!fmt.has_audio) continue;
 
-function buildStreamResult(format: AudioFormat): ResolvedAudioStream {
-    if (!format.url) {
-        throw new Error('yt-dlp did not return an audio URL');
+        const raw = fmt as unknown as Record<string, unknown>;
+
+        // Get the stream URL — youtubei.js deciphers automatically when retrieve_player is true
+        const url = (raw.url as string | undefined) ?? undefined;
+        if (!url) continue;
+
+        const mimeType = (raw.mime_type as string) ?? fmt.mime_type ?? 'audio/webm';
+        const codec = mimeType.includes('codecs=')
+            ? mimeType.split('codecs="')[1]?.split('"')[0] ?? 'unknown'
+            : 'unknown';
+        const container = mimeType.split(';')[0]?.split('/')[1] ?? 'webm';
+
+        audioFormats.push({
+            url,
+            mimeType: mimeType.split(';')[0] ?? 'audio/webm',
+            bitrate: (raw.bitrate as number) ?? (raw.average_bitrate as number) ?? 0,
+            audioSampleRate: Number.parseInt(String(raw.audio_sample_rate ?? '0'), 10),
+            audioChannels: (raw.audio_channels as number) ?? 2,
+            codec,
+            container,
+            contentLength: Number.parseInt(String(raw.content_length ?? '0'), 10),
+        });
     }
+
+    if (audioFormats.length === 0) {
+        throw new Error(`No audio formats found for video ${videoId}`);
+    }
+
+    // Pick the best format by score
+    audioFormats.sort((a, b) => scoreFormat(b) - scoreFormat(a));
+    const best = audioFormats[0];
 
     return {
-        url: format.url,
-        mimeType: inferMimeType(format),
+        url: best.url,
+        mimeType: best.mimeType,
         requestHeaders: {
-            'User-Agent': format.http_headers?.['User-Agent'] ?? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            Accept: format.http_headers?.Accept ?? '*/*',
-            'Accept-Language': format.http_headers?.['Accept-Language'] ?? 'en-US,en;q=0.9',
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: '*/*',
+            'Accept-Language': 'en-US,en;q=0.9',
             Origin: 'https://music.youtube.com',
             Referer: 'https://music.youtube.com/',
         },
-        expiresAt: parseExpiresAt(format.url),
-        bitrateKbps: format.abr ?? format.tbr ?? null,
-        audioCodec: format.acodec ?? null,
-        container: format.ext ?? null,
+        expiresAt: parseExpiresAt(best.url),
+        bitrateKbps: best.bitrate > 0 ? Math.round(best.bitrate / 1000) : null,
+        audioCodec: best.codec !== 'unknown' ? best.codec : null,
+        container: best.container !== 'webm' ? best.container : 'webm',
     };
 }
 
-async function dumpVideoJson(videoId: string, forceRefresh = false): Promise<YtDlpPayload> {
-    const cached = metadataCache.get(videoId);
+// ─── Public API ──────────────────────────────────────────────────────
+
+export async function resolveAudioStream(videoId: string, forceRefresh = false): Promise<ResolvedAudioStream> {
+    const cached = streamCache.get(videoId);
     const now = Date.now();
 
-    if (!forceRefresh && cached && now - cached.cachedAt <= STREAM_CACHE_TTL_MS) {
-        return cached.value;
+    if (!forceRefresh && cached) {
+        const staleByTime = now - cached.cachedAt > STREAM_CACHE_TTL_MS;
+        const staleByExpiry = cached.value.expiresAt !== null && cached.value.expiresAt - now < 60_000;
+
+        if (!staleByTime && !staleByExpiry) {
+            return cached.value;
+        }
     }
 
-    const ytDlp = process.env.YTDLP_BIN || 'yt-dlp';
-    const args = [
-        '--dump-single-json',
-        '--no-warnings',
-        '--no-playlist',
-        '--skip-download',
-        '--js-runtimes',
-        'node',
-        '-f',
-        'ba', // Fetch all audio-only formats to pick the best one
-        getVideoUrl(videoId),
-    ];
-
-    const { stdout } = await execFileAsync(ytDlp, args, {
-        windowsHide: true,
-        maxBuffer: 50 * 1024 * 1024, // Increased buffer for large metadata
-    });
-
-    const payload = JSON.parse(stdout) as YtDlpPayload;
-    metadataCache.set(videoId, { value: payload, cachedAt: now });
-    return payload;
+    const extracted = await extractAudioStream(videoId);
+    streamCache.set(videoId, { value: extracted, cachedAt: now });
+    return extracted;
 }
 
-async function extractAudioStream(videoId: string, forceRefresh = false): Promise<ResolvedAudioStream> {
-    const payload = await dumpVideoJson(videoId, forceRefresh);
-    const bestFormat = pickBestAudioFormat(payload);
-    if (!bestFormat) {
-        throw new Error('yt-dlp could not find a playable audio-only format');
-    }
-
-    return buildStreamResult(bestFormat);
+export function clearResolvedAudioStream(videoId: string) {
+    streamCache.delete(videoId);
 }
+
+// ─── Caption / Lyrics Extraction ─────────────────────────────────────
+
+const DEFAULT_CAPTION_LANGUAGE_ORDER = ['en', 'en-US', 'en-GB', 'hi', 'hi-IN'];
 
 function sanitizeTimedLine(text: string): string | null {
     const normalized = normalizeLyricText(text);
     if (!normalized || /^\[[^\]]+\]$/.test(normalized)) {
         return null;
     }
-
     return normalized;
 }
 
 function dedupeTimedLines(lines: LyricLine[]): LyricLine[] {
     const deduped: LyricLine[] = [];
-
     for (const line of lines) {
-        if (!line.text) {
-            continue;
-        }
-
+        if (!line.text) continue;
         const previous = deduped[deduped.length - 1];
         if (previous && previous.text === line.text) {
             previous.endMs = line.endMs ?? previous.endMs;
             continue;
         }
-
         deduped.push(line);
     }
-
     return deduped;
 }
 
 function buildSyncedLyrics(lines: LyricLine[], language: string): TrackLyrics | null {
     const deduped = dedupeTimedLines(lines);
-    if (deduped.length === 0) {
-        return null;
-    }
-
+    if (deduped.length === 0) return null;
     return {
         text: deduped.map((line) => line.text).join('\n'),
         lines: deduped,
@@ -263,13 +218,9 @@ function parseJson3Transcript(raw: string, language: string): TrackLyrics | null
         const lines = (payload.events ?? [])
             .map<LyricLine | null>((event) => {
                 const text = sanitizeTimedLine((event.segs ?? []).map((segment) => segment.utf8 ?? '').join(''));
-                if (!text) {
-                    return null;
-                }
-
+                if (!text) return null;
                 const startMs = typeof event.tStartMs === 'number' ? event.tStartMs : null;
                 const durationMs = typeof event.dDurationMs === 'number' ? event.dDurationMs : null;
-
                 return {
                     text,
                     startMs,
@@ -287,9 +238,7 @@ function parseJson3Transcript(raw: string, language: string): TrackLyrics | null
 function parseTimestampMs(value: string): number | null {
     const normalized = value.replace(',', '.');
     const parts = normalized.split(':').map((part) => part.trim());
-    if (parts.length < 2 || parts.length > 3) {
-        return null;
-    }
+    if (parts.length < 2 || parts.length > 3) return null;
 
     const [hours, minutes, seconds] =
         parts.length === 3
@@ -319,114 +268,87 @@ function parseVttTranscript(raw: string, language: string): TrackLyrics | null {
             .filter(Boolean);
 
         const timeLineIndex = parts.findIndex((part) => part.includes('-->'));
-        if (timeLineIndex === -1) {
-            continue;
-        }
+        if (timeLineIndex === -1) continue;
 
         const [startRaw, endRaw] = parts[timeLineIndex].split('-->').map((part) => part.trim().split(' ')[0] ?? '');
         const startMs = parseTimestampMs(startRaw);
         const endMs = parseTimestampMs(endRaw);
         const text = sanitizeTimedLine(parts.slice(timeLineIndex + 1).join(' '));
 
-        if (!text) {
-            continue;
-        }
+        if (!text) continue;
 
-        lines.push({
-            text,
-            startMs,
-            endMs,
-        });
+        lines.push({ text, startMs, endMs });
     }
 
     return buildSyncedLyrics(lines, language);
 }
 
-function pickCaptionFormat(
-    captionGroups: Record<string, CaptionFormat[]> | undefined,
-    preferredLanguages: string[]
-): SelectedCaptionFormat | null {
-    if (!captionGroups) {
-        return null;
-    }
-
-    const availableLanguages = Object.keys(captionGroups);
-    const orderedLanguages = [
-        ...preferredLanguages.filter((language) => availableLanguages.includes(language)),
-        ...availableLanguages.filter((language) => !preferredLanguages.includes(language)),
-    ];
-
-    for (const language of orderedLanguages) {
-        const formats = captionGroups[language] ?? [];
-        const preferredFormat =
-            formats.find((format) => format.ext === 'json3' && format.url) ??
-            formats.find((format) => format.ext === 'vtt' && format.url) ??
-            formats.find((format) => format.url);
-
-        if (preferredFormat?.url) {
-            return {
-                ...preferredFormat,
-                language,
-            };
-        }
-    }
-
-    return null;
-}
+type CaptionTrack = {
+    baseUrl: string;
+    languageCode: string;
+    kind?: string;
+    name?: { simpleText?: string };
+};
 
 export async function resolveCaptionTranscript(
     videoId: string,
     preferredLanguages: string[] = DEFAULT_CAPTION_LANGUAGE_ORDER
 ): Promise<TrackLyrics | null> {
-    const payload = await dumpVideoJson(videoId);
-    const manualCaption = pickCaptionFormat(payload.subtitles, preferredLanguages);
-    const automaticCaption = pickCaptionFormat(payload.automatic_captions, preferredLanguages);
-    const selectedCaption = manualCaption ?? automaticCaption;
+    const yt = await getPlayerClient();
+    const info = await yt.getBasicInfo(videoId);
+    const raw = info as unknown as Record<string, unknown>;
+    
+    // Try to get captions from the player response
+    const playerResponse = raw.player_response as Record<string, unknown> | undefined;
+    const captions = (playerResponse?.captions ?? (raw as Record<string, unknown>).captions) as Record<string, unknown> | undefined;
+    const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined;
+    const captionTracks = (renderer?.captionTracks ?? []) as CaptionTrack[];
 
-    if (!selectedCaption?.url) {
+    if (captionTracks.length === 0) {
         return null;
     }
 
-    const response = await fetch(selectedCaption.url, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0',
-            'Accept-Language': 'en-US,en;q=0.9',
-        },
-        cache: 'no-store',
-    });
-
-    if (!response.ok) {
-        return null;
-    }
-
-    const rawTranscript = await response.text();
-    if (selectedCaption.ext === 'json3') {
-        return parseJson3Transcript(rawTranscript, selectedCaption.language);
-    }
-
-    return parseVttTranscript(rawTranscript, selectedCaption.language)
-        ?? createUnsyncedLyrics(rawTranscript, 'captions', selectedCaption.language);
-}
-
-export async function resolveAudioStream(videoId: string, forceRefresh = false): Promise<ResolvedAudioStream> {
-    const cached = streamCache.get(videoId);
-    const now = Date.now();
-
-    if (!forceRefresh && cached) {
-        const staleByTime = now - cached.cachedAt > STREAM_CACHE_TTL_MS;
-        const staleByExpiry = cached.value.expiresAt !== null && cached.value.expiresAt - now < 60_000;
-
-        if (!staleByTime && !staleByExpiry) {
-            return cached.value;
+    // Pick the best caption track by language preference
+    let selected: CaptionTrack | null = null;
+    for (const lang of preferredLanguages) {
+        const match = captionTracks.find((t) => t.languageCode === lang);
+        if (match) {
+            selected = match;
+            break;
         }
     }
+    if (!selected) {
+        selected = captionTracks[0];
+    }
 
-    const extracted = await extractAudioStream(videoId, forceRefresh);
-    streamCache.set(videoId, { value: extracted, cachedAt: now });
-    return extracted;
-}
+    if (!selected?.baseUrl) return null;
 
-export function clearResolvedAudioStream(videoId: string) {
-    streamCache.delete(videoId);
-    metadataCache.delete(videoId);
+    // Fetch as json3 first, then fall back to vtt
+    const json3Url = `${selected.baseUrl}&fmt=json3`;
+    try {
+        const response = await fetch(json3Url, {
+            headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'en-US,en;q=0.9' },
+            cache: 'no-store',
+        });
+        if (response.ok) {
+            const text = await response.text();
+            const result = parseJson3Transcript(text, selected.languageCode);
+            if (result) return result;
+        }
+    } catch { /* fall through to VTT */ }
+
+    const vttUrl = `${selected.baseUrl}&fmt=vtt`;
+    try {
+        const response = await fetch(vttUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0', 'Accept-Language': 'en-US,en;q=0.9' },
+            cache: 'no-store',
+        });
+        if (response.ok) {
+            const text = await response.text();
+            return parseVttTranscript(text, selected.languageCode)
+                ?? createUnsyncedLyrics(text, 'captions', selected.languageCode);
+        }
+    } catch { /* no captions available */ }
+
+    return null;
 }
