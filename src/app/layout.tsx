@@ -44,31 +44,31 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang='en'>
-      <body className={`${manrope.variable} ${fraunces.variable} min-h-screen bg-background text-foreground`}>
+    <html lang="en">
+      <body className={`${manrope.variable} ${fraunces.variable} min-h-screen bg-background text-foreground antialiased`}>
         <AuthProvider>
           <LibraryStoreHydrator />
           <SplashScreen />
-          <div className="relative min-h-screen pb-40 sm:pb-28">
+          
+          <div className="flex min-h-screen flex-col">
             <Sidebar />
-            <div className="relative min-h-screen pl-0 sm:pl-[5.5rem] md:pl-[20.75rem]">
-              <div className="pointer-events-none absolute inset-0 ambient-grid opacity-45" />
-              <div className="relative z-10 flex min-h-screen flex-col">
-                <TopNav />
-                <main className="relative z-10 flex-1 pb-20">
-                  {children}
-                </main>
-                <footer className="relative z-10 px-3 pb-28 pt-2 md:px-5">
-                  <div className="shell-panel-soft flex items-center justify-between rounded-[26px] px-4 py-3 text-[11px] text-white/26">
-
-                    <p className="uppercase tracking-[0.24em] text-white/18">
-                      Powered by YouTube Music
-                    </p>
-                  </div>
-                </footer>
-              </div>
+            
+            <div className="relative z-10 flex flex-1 flex-col pl-0 sm:pl-[5.5rem] md:pl-[19.25rem]">
+              <TopNav />
+              <main className="flex-1 px-4 py-6 md:px-8">
+                {children}
+              </main>
+              <footer className="px-3 pb-32 pt-2 md:px-5 md:pb-6">
+                <div className="shell-panel-soft flex items-center justify-between rounded-[26px] px-4 py-3 text-[11px] text-white/26">
+                  <p className="uppercase tracking-[0.24em] text-white/18">
+                    Powered by YouTube Music
+                  </p>
+                  <p className="font-bold tracking-[0.1em] uppercase text-primary/40">Made by Priyanshu</p>
+                </div>
+              </footer>
             </div>
           </div>
+
           <YoutubePlayer />
           <ServiceWorkerRegistration />
         </AuthProvider>

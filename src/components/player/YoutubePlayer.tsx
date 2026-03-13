@@ -92,42 +92,64 @@ function WaveProgressBar({
     onHover: (event: ReactMouseEvent<HTMLDivElement>) => void;
     onLeave: () => void;
 }) {
+    // Reduce number of bars in compact mode for performance
+    const bars = compact ? waveHeights.filter((_, i) => i % 2 === 0) : waveHeights;
+    
     return (
         <div
             onClick={onSeek}
             onMouseMove={onHover}
             onMouseLeave={onLeave}
-            className={`group relative cursor-pointer overflow-hidden rounded-full border border-white/10 bg-white/[0.04] ${
-                compact ? "h-5" : "h-14"
+            className={`group relative cursor-pointer overflow-hidden rounded-full border border-white/5 bg-white/[0.02] ${
+                compact ? "h-1.5" : "h-14"
             }`}
         >
-            <div className={`wave-progress-grid ${compact ? "px-2 py-[3px]" : "px-3 py-2"}`}>
-                {waveHeights.map((height, index) => {
-                    const marker = ((index + 1) / waveHeights.length) * 100;
-                    const stateClass =
-                        marker <= progressPercent
-                            ? "wave-progress-bar-active"
-                            : marker <= bufferedPercent
-                                ? "wave-progress-bar-buffered"
-                                : "wave-progress-bar-idle";
+            {!compact ? (
+                <div className="wave-progress-grid px-3 py-2">
+                    {bars.map((height, index) => {
+                        const marker = ((index + 1) / bars.length) * 100;
+                        const stateClass =
+                            marker <= progressPercent
+                                ? "wave-progress-bar-active"
+                                : marker <= bufferedPercent
+                                    ? "wave-progress-bar-buffered"
+                                    : "wave-progress-bar-idle";
 
-                    return (
-                        <span
-                            key={index}
-                            className={`wave-progress-bar ${stateClass}`}
-                            style={{
-                                height: `${compact ? Math.max(24, height - 24) : height}%`,
-                                animationDelay: `${index * 36}ms`,
-                            }}
+                        return (
+                            <span
+                                key={index}
+                                className={`wave-progress-bar ${stateClass}`}
+                                style={{
+                                    height: `${height}%`,
+                                    animationDelay: `${index * 36}ms`,
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+            ) : (
+                // Simple progress bar for compact mode to save CPU/GPU
+                <div className="absolute inset-0 flex items-center px-0">
+                    <div className="relative h-full w-full bg-white/10">
+                        <div 
+                            className="absolute inset-y-0 left-0 bg-white/20 transition-all duration-300" 
+                            style={{ width: `${bufferedPercent}%` }} 
                         />
-                    );
-                })}
-            </div>
+                        <div 
+                            className="absolute inset-y-0 left-0 bg-[var(--color-primary)] transition-all duration-300" 
+                            style={{ width: `${progressPercent}%` }} 
+                        />
+                    </div>
+                </div>
+            )}
 
-            <div
-                className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-white/60 bg-white shadow-[0_10px_28px_rgba(255,255,255,0.22)] opacity-0 transition group-hover:opacity-100"
-                style={{ left: `calc(${progressPercent}% - 8px)` }}
-            />
+            {!compact && (
+                <div
+                    className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-white/60 bg-white shadow-[0_10px_28px_rgba(255,255,255,0.22)] opacity-0 transition group-hover:opacity-100"
+                    style={{ left: `calc(${progressPercent}% - 8px)` }}
+                />
+            )}
+            
             {hoverProgress !== null && currentDuration > 0 && (
                 <span
                     className="pointer-events-none absolute -top-9 rounded-full bg-black/75 px-2 py-1 text-[11px] text-white"
@@ -209,8 +231,6 @@ export default function YoutubePlayer() {
         isShuffled,
         sleepTimerMode,
         sleepTimerEndsAt,
-        bassBoost,
-        soundProfile,
         expandedTab,
         togglePlay,
         setProgress,
@@ -230,8 +250,6 @@ export default function YoutubePlayer() {
         moveToTop,
         setSleepTimer,
         clearSleepTimer,
-        setBassBoost,
-        setSoundProfile,
     } = useYouTubePlayerStore();
     const { isLiked, toggleLike } = useLibraryStore();
 
@@ -386,86 +404,42 @@ export default function YoutubePlayer() {
                                                     <div className="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-white/70">Lyrics: {getLyricsStatus(lyrics)}</div>
                                                     <div className="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-white/70">Autoplay: {autoplayEnabled ? "On" : "Off"}</div>
                                                     <div className="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-white/70">Duration: {formatTime(currentDuration)}</div>
-                                                    <div className="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-white/70">Sleep timer: {sleepTimerStatus}</div>
-                                                    <div className="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-white/70">Sound: {soundProfile === "enhanced" ? "Enhanced" : "Balanced"} · Bass {bassBoost.toFixed(0)} dB</div>
+                                                    <div className="rounded-2xl bg-white/[0.03] px-4 py-3 text-sm text-white/70 font-medium text-[var(--color-primary)]">Sleep timer: {sleepTimerStatus}</div>
                                                 </div>
                                             </div>
                                             <div className="rounded-[26px] border border-white/10 bg-white/[0.03] p-5">
                                                 <div className="flex items-center justify-between gap-3">
                                                     <div>
-                                                        <p className="text-xs uppercase tracking-[0.28em] text-white/35">Playback Tools</p>
-                                                        <p className="mt-1 text-sm text-white/45">Quick controls for sound shaping and automatic stop.</p>
+                                                        <p className="text-xs uppercase tracking-[0.28em] text-white/35">Sleep Timer</p>
+                                                        <p className="mt-1 text-sm text-white/45">Schedule an automatic stop for your playback.</p>
                                                     </div>
                                                     {sleepTimerMode !== "off" && (
-                                                        <button type="button" onClick={clearSleepTimer} className="text-xs text-white/45 transition hover:text-white">
-                                                            Clear timer
+                                                        <button type="button" onClick={clearSleepTimer} className="text-xs text-[var(--color-primary)] transition hover:opacity-80">
+                                                            Reset timer
                                                         </button>
                                                     )}
                                                 </div>
-                                                <div className="mt-4 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-                                                    <div className="rounded-2xl bg-white/[0.03] p-4">
-                                                        <div className="mb-3 flex items-center justify-between">
-                                                            <p className="text-sm font-semibold text-white">Sound profile</p>
-                                                            <span className="text-xs text-white/35">Source quality is capped by the stream</span>
-                                                        </div>
-                                                        <div className="flex flex-wrap gap-2">
+                                                <div className="mt-4 rounded-2xl bg-white/[0.03] p-4">
+                                                    <p className="text-sm font-semibold text-white">Status: {sleepTimerStatus}</p>
+                                                    <div className="mt-4 flex flex-wrap gap-2">
+                                                        {[15, 30, 45, 60].map((minutes) => (
                                                             <button
+                                                                key={minutes}
                                                                 type="button"
-                                                                onClick={() => setSoundProfile("balanced")}
-                                                                className={`rounded-full px-4 py-2 text-sm transition ${soundProfile === "balanced" ? "text-[var(--color-primary)]" : "bg-white/[0.04] text-white/55 hover:text-white"}`}
-                                                                style={soundProfile === "balanced" ? accentStyle() : undefined}
+                                                                onClick={() => setSleepTimer("minutes", minutes)}
+                                                                className="rounded-full bg-white/[0.04] px-4 py-2 text-sm text-white/65 transition hover:bg-white/[0.08] hover:text-white"
                                                             >
-                                                                Balanced
+                                                                {minutes}m
                                                             </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSoundProfile("enhanced")}
-                                                                className={`rounded-full px-4 py-2 text-sm transition ${soundProfile === "enhanced" ? "text-[var(--color-primary)]" : "bg-white/[0.04] text-white/55 hover:text-white"}`}
-                                                                style={soundProfile === "enhanced" ? accentStyle() : undefined}
-                                                            >
-                                                                Enhanced
-                                                            </button>
-                                                        </div>
-                                                        <div className="mt-4">
-                                                            <div className="mb-2 flex items-center justify-between text-sm text-white/70">
-                                                                <span>Bass boost</span>
-                                                                <span>{bassBoost.toFixed(0)} dB</span>
-                                                            </div>
-                                                            <input
-                                                                type="range"
-                                                                min={0}
-                                                                max={12}
-                                                                step={1}
-                                                                value={bassBoost}
-                                                                onChange={(event) => setBassBoost(Number.parseFloat(event.target.value))}
-                                                                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/12 accent-[var(--color-primary)]"
-                                                                aria-label="Bass boost"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="rounded-2xl bg-white/[0.03] p-4">
-                                                        <p className="text-sm font-semibold text-white">Sleep timer</p>
-                                                        <p className="mt-1 text-sm text-white/45">{sleepTimerStatus}</p>
-                                                        <div className="mt-4 flex flex-wrap gap-2">
-                                                            {[15, 30, 45, 60].map((minutes) => (
-                                                                <button
-                                                                    key={minutes}
-                                                                    type="button"
-                                                                    onClick={() => setSleepTimer("minutes", minutes)}
-                                                                    className="rounded-full bg-white/[0.04] px-4 py-2 text-sm text-white/65 transition hover:bg-white/[0.08] hover:text-white"
-                                                                >
-                                                                    {minutes}m
-                                                                </button>
-                                                            ))}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSleepTimer("end_of_track")}
-                                                                className={`rounded-full px-4 py-2 text-sm transition ${sleepTimerMode === "end_of_track" ? "text-[var(--color-primary)]" : "bg-white/[0.04] text-white/65 hover:bg-white/[0.08] hover:text-white"}`}
-                                                                style={sleepTimerMode === "end_of_track" ? accentStyle() : undefined}
-                                                            >
-                                                                End of track
-                                                            </button>
-                                                        </div>
+                                                        ))}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSleepTimer("end_of_track")}
+                                                            className={`rounded-full px-4 py-2 text-sm transition ${sleepTimerMode === "end_of_track" ? "text-[var(--color-primary)] font-bold" : "bg-white/[0.04] text-white/65 hover:bg-white/[0.08] hover:text-white"}`}
+                                                            style={sleepTimerMode === "end_of_track" ? accentStyle() : undefined}
+                                                        >
+                                                            End of track
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -541,60 +515,139 @@ export default function YoutubePlayer() {
                 )}
             </AnimatePresence>
 
-            <motion.div initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }} transition={{ type: "spring", damping: 28, stiffness: 320 }} className="fixed bottom-16 left-0 right-0 z-[55] glass-player select-none sm:bottom-0" data-testid="player-bar" data-track-id={currentTrack.videoId} data-playback-state={isLoading ? "loading" : isPlaying ? "playing" : "paused"} data-progress-seconds={Math.floor(progress)} data-duration-seconds={Math.floor(currentDuration)}>
-                <div className="px-3 pt-2 md:px-4">
-                    <WaveProgressBar
-                        compact
-                        progressPercent={progressPercent}
-                        bufferedPercent={bufferedPercent}
-                        hoverProgress={hoverProgress}
-                        currentDuration={currentDuration}
-                        onSeek={(event) => seekFromClientX(event.clientX, event.currentTarget)}
-                        onHover={handleProgressHover}
-                        onLeave={() => setHoverProgress(null)}
+            <motion.div 
+                initial={{ y: 100 }} 
+                animate={{ y: 0 }} 
+                exit={{ y: 100 }} 
+                transition={{ type: "spring", stiffness: 260, damping: 20 }} 
+                className="fixed bottom-[72px] left-0 right-0 z-[55] border-t border-white/5 bg-black/40 backdrop-blur-lg select-none sm:bottom-0"
+                data-testid="player-bar"
+            >
+                {/* Thin progress bar at the very top of the bar */}
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-white/5">
+                    <div 
+                        className="h-full bg-[var(--color-primary)] transition-all duration-500 ease-out" 
+                        style={{ width: `${progressPercent}%` }} 
                     />
                 </div>
 
-                <div className="grid items-center gap-4 px-4 py-3 md:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.8fr)_minmax(0,1.1fr)]">
-                    <div className="flex min-w-0 items-center gap-3">
-                        <button type="button" onClick={() => setExpanded(true)} className="group relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]" title="Open immersive player"><Image src={currentTrack.thumbnail} alt={currentTrack.title} fill className="object-cover transition duration-300 group-hover:scale-105" sizes="48px" /><div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition group-hover:opacity-100"><ChevronUp className="h-4 w-4 text-white" /></div></button>
+                <div className="flex h-16 items-center justify-between px-4 md:px-6">
+                    {/* Left: Track Info */}
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <button 
+                            type="button" 
+                            onClick={() => setExpanded(true)} 
+                            className="group relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]"
+                        >
+                            <Image 
+                                src={currentTrack.thumbnail} 
+                                alt={currentTrack.title} 
+                                fill 
+                                className="object-cover transition duration-300 group-hover:scale-110" 
+                                sizes="40px" 
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
+                                <ChevronUp className="h-4 w-4 text-white" />
+                            </div>
+                        </button>
                         <div className="min-w-0 flex-1">
-                            <button type="button" onClick={() => setExpanded(true)} className="block max-w-full truncate text-left text-sm font-semibold text-white transition hover:text-[var(--color-primary)]" data-testid="player-track-title">{currentTrack.title}</button>
-                            <button type="button" onClick={() => openPanel("player")} className="block max-w-full truncate text-left text-xs text-white/45 transition hover:text-white" data-testid="player-track-artist">{currentTrack.artist}</button>
+                            <button 
+                                type="button" 
+                                onClick={() => setExpanded(true)} 
+                                className="block max-w-full truncate text-left text-sm font-medium text-white transition hover:text-[var(--color-primary)]"
+                            >
+                                {currentTrack.title}
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => openPanel("player")} 
+                                className="block max-w-full truncate text-left text-[11px] text-white/40 transition hover:text-white"
+                            >
+                                {currentTrack.artist}
+                            </button>
                         </div>
+                    </div>
+
+                    {/* Center: Essential Controls */}
+                    <div className="flex items-center gap-1 sm:gap-4 px-4">
+                        <button 
+                            type="button" 
+                            onClick={prevTrack} 
+                            className="p-2 text-white/60 transition hover:text-white" 
+                            aria-label="Previous track"
+                        >
+                            <SkipBack className="h-5 w-5 fill-current" />
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={togglePlay} 
+                            disabled={isLoading} 
+                            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black transition hover:scale-105 active:scale-95 disabled:opacity-60"
+                            aria-label={isPlaying ? "Pause" : "Play"}
+                        >
+                            {isLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : isPlaying ? (
+                                <Pause className="h-4 w-4 fill-current" />
+                            ) : (
+                                <Play className="ml-0.5 h-4 w-4 fill-current" />
+                            )}
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={nextTrack} 
+                            className="p-2 text-white/60 transition hover:text-white" 
+                            aria-label="Next track"
+                        >
+                            <SkipForward className="h-5 w-5 fill-current" />
+                        </button>
+                    </div>
+
+                    {/* Right: Actions & Utils */}
+                    <div className="flex flex-1 items-center justify-end gap-1 md:gap-3">
                         <div className="hidden items-center gap-1 sm:flex">
-                            <button type="button" onClick={() => toggleLike(currentTrack)} className={`${chromeButton} h-10 w-10 ${liked ? "text-[var(--color-primary)]" : ""}`} style={liked ? accentStyle() : undefined} aria-label={liked ? "Unlike track" : "Like track"}><ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} /></button>
-
-                            <TrackActionMenu track={currentTrack} side="top" showSleepTimer triggerClassName={`${chromeButton} h-10 w-10`} />
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="flex items-center gap-2 md:gap-3">
-                            <button type="button" onClick={prevTrack} className={`${chromeButton} h-10 w-10`} aria-label="Previous track"><SkipBack className="h-4 w-4 fill-current" /></button>
-                            <button type="button" onClick={togglePlay} disabled={isLoading} className="inline-flex h-12 w-12 items-center justify-center rounded-full text-black transition hover:scale-[1.03] disabled:opacity-60" style={{ backgroundColor: "var(--color-primary)", color: "var(--color-primary-foreground)" }} data-testid="player-play-toggle" aria-label={isLoading ? "Loading track" : isPlaying ? "Pause" : "Play"}>
-                                {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
+                            <button 
+                                type="button" 
+                                onClick={() => toggleLike(currentTrack)} 
+                                className={`p-2 transition ${liked ? "text-[var(--color-primary)]" : "text-white/40 hover:text-white"}`}
+                                aria-label="Like"
+                            >
+                                <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
                             </button>
-                            <button type="button" onClick={nextTrack} className={`${chromeButton} h-10 w-10`} aria-label="Next track"><SkipForward className="h-4 w-4 fill-current" /></button>
                         </div>
-                        <span className="text-xs font-medium tabular-nums text-white/45">{formatTime(progress)} / {formatTime(currentDuration)}</span>
-                    </div>
 
-                    <div className="flex items-center justify-end gap-2">
-                        {radioMode && <span className="hidden rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--color-primary)] lg:inline-flex" style={accentStyle()}>Radio</span>}
-                        {autoplayEnabled && <span className="hidden h-2 w-2 rounded-full bg-[var(--color-primary)] md:block" title="Autoplay enabled" />}
-                        <button type="button" onClick={() => openPanel("lyrics")} className={`${chromeButton} h-10 px-3 text-sm ${expandedTab === "lyrics" ? "text-[var(--color-primary)]" : ""}`} style={expandedTab === "lyrics" ? accentStyle() : undefined}><Captions className="mr-2 h-4 w-4" /><span className="hidden md:inline">{lyrics?.timingMode === "synced" ? "Synced" : lyrics?.timingMode === "estimated" ? "Estimated" : "Lyrics"}</span></button>
-                        <button type="button" onClick={() => openPanel("queue")} className={`${chromeButton} h-10 px-3 text-sm ${expandedTab === "queue" ? "text-[var(--color-primary)]" : ""}`} style={expandedTab === "queue" ? accentStyle() : undefined}><ListMusic className="mr-2 h-4 w-4" /><span className="hidden md:inline">Queue</span></button>
-                        <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 lg:flex">
-                            <button type="button" onClick={toggleMute} className="text-white/70 transition hover:text-white" aria-label={isMuted ? "Unmute" : "Mute"}>
-                                {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : volume < 0.45 ? <Volume1 className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                        <div className="flex items-center rounded-full border border-white/10 bg-white/[0.03] p-1">
+                            <button 
+                                type="button" 
+                                onClick={() => openPanel("lyrics")} 
+                                className={`rounded-full p-2.5 transition ${expandedTab === "lyrics" ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
+                                title="Lyrics"
+                            >
+                                <Captions className="h-4 w-4" />
                             </button>
-                            <input type="range" min={0} max={1} step={0.01} value={isMuted ? 0 : volume} onChange={(event) => setVolume(Number.parseFloat(event.target.value))} className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-white/15 accent-[var(--color-primary)]" aria-label="Volume" />
+                            <button 
+                                type="button" 
+                                onClick={() => openPanel("queue")} 
+                                className={`rounded-full p-2.5 transition ${expandedTab === "queue" ? "bg-white text-black" : "text-white/40 hover:text-white"}`}
+                                title="Queue"
+                            >
+                                <ListMusic className="h-4 w-4" />
+                            </button>
                         </div>
-                        <button type="button" onClick={cycleRepeat} className={`${chromeButton} hidden h-10 w-10 md:inline-flex ${repeatMode !== "off" ? "text-[var(--color-primary)]" : ""}`} style={repeatMode !== "off" ? accentStyle() : undefined} aria-label="Toggle repeat"><RepeatIcon className="h-4 w-4" /></button>
-                        <button type="button" onClick={toggleShuffle} className={`${chromeButton} hidden h-10 w-10 md:inline-flex ${isShuffled ? "text-[var(--color-primary)]" : ""}`} style={isShuffled ? accentStyle() : undefined} aria-label="Toggle shuffle"><Shuffle className="h-4 w-4" /></button>
-                        <button type="button" onClick={() => setExpanded(true)} className={`${chromeButton} h-10 w-10`} aria-label="Expand player"><ChevronUp className="h-4 w-4" /></button>
-                        <button type="button" onClick={closePlayer} className={`${chromeButton} h-10 w-10`} aria-label="Close player"><X className="h-4 w-4" /></button>
+                        
+                        <div className="hidden items-center gap-2 lg:flex ml-2">
+                             <button type="button" onClick={toggleMute} className="text-white/40 transition hover:text-white">
+                                {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                            </button>
+                        </div>
+
+                        <button 
+                            type="button" 
+                            onClick={() => setExpanded(true)} 
+                            className="ml-2 p-2 text-white/40 transition hover:text-white"
+                        >
+                            <ChevronUp className="h-4 w-4" />
+                        </button>
                     </div>
                 </div>
             </motion.div>

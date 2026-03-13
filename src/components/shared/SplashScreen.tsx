@@ -1,43 +1,56 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useLibraryStore } from "@/store/library";
 
 export function SplashScreen() {
+    const { loading: authLoading } = useAuth();
+    const hasHydrated = useLibraryStore((state) => state.hasHydrated);
+    const isLoading = authLoading || !hasHydrated;
+    
     const [mounted, setMounted] = useState(false);
-    const [isVisible, setIsVisible] = useState(false);
     const [isLeaving, setIsLeaving] = useState(false);
+    const [isVisible, setIsVisible] = useState(true);
+    const [shouldRender, setShouldRender] = useState(true);
 
     useEffect(() => {
         setMounted(true);
-        const dismissed = window.sessionStorage.getItem("songdb-splash-dismissed") === "1";
-        if (!dismissed) {
-            setIsVisible(true);
-        }
+        
+        // Safety timeout: If app doesn't load in 5s, dismiss anyway
+        const safetyTimer = setTimeout(() => {
+            console.warn("SongDB: SplashScreen safety dismissal triggered (5s timeout)");
+            setIsLeaving(true);
+            setTimeout(() => {
+                setIsVisible(false);
+                setShouldRender(false);
+            }, 500);
+        }, 5000);
+
+        return () => clearTimeout(safetyTimer);
     }, []);
 
     useEffect(() => {
-        if (!isVisible) return;
+        if (!mounted || isLoading) return;
 
-        window.sessionStorage.setItem("songdb-splash-dismissed", "1");
-
-        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const minDisplayTime = prefersReducedMotion ? 280 : 650;
-        const exitDuration = prefersReducedMotion ? 120 : 220;
-
-        const timer1 = setTimeout(() => setIsLeaving(true), minDisplayTime);
-        const timer2 = setTimeout(() => setIsVisible(false), minDisplayTime + exitDuration);
+        // Start dismissal when loading finishes
+        const transitionTimer = setTimeout(() => setIsLeaving(true), 100);
+        const finalTimer = setTimeout(() => {
+            setIsVisible(false);
+            setShouldRender(false);
+        }, 600); // Wait for transition
 
         return () => {
-            clearTimeout(timer1);
-            clearTimeout(timer2);
+            clearTimeout(transitionTimer);
+            clearTimeout(finalTimer);
         };
-    }, [isVisible]);
+    }, [isLoading, mounted]);
 
-    if (!mounted || !isVisible) return null;
+    if (!mounted || !shouldRender) return null;
 
     return (
         <div
-            className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black pointer-events-none transition-all duration-600 ease-[cubic-bezier(0.85,0,0.15,1)] ${isLeaving ? 'opacity-0 scale-110' : 'opacity-100 scale-100'}`}
+            className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.85,0,0.15,1)] ${isLeaving ? 'opacity-0 scale-105' : 'opacity-100 scale-100'}`}
         >
             {/* Ambient glow */}
             <div className="absolute inset-0 overflow-hidden">

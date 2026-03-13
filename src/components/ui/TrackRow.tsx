@@ -24,7 +24,7 @@ export function TrackRow({ track, index, showIndex = false, compact = false }: T
 
     return (
         <div
-            className={`flex items-center gap-3 ${compact ? 'p-2' : 'px-4 py-3'} rounded-xl hover:bg-white/[0.05] transition-all group cursor-pointer ${isCurrentTrack ? 'bg-white/[0.06]' : ''}`}
+            className={`flex items-center gap-3.5 ${compact ? 'p-2' : 'px-4 py-3.5'} rounded-2xl hover:bg-white/[0.06] transition-all duration-300 group cursor-pointer ${isCurrentTrack ? 'bg-white/[0.08] border border-white/5' : 'border border-transparent'}`}
             onClick={() => playTrack(track)}
             data-testid="track-row"
             data-track-id={track.videoId}
@@ -32,39 +32,39 @@ export function TrackRow({ track, index, showIndex = false, compact = false }: T
         >
             {/* Index or play icon */}
             {showIndex && (
-                <div className="w-7 text-center flex-shrink-0">
-                    <span className={`text-sm tabular-nums group-hover:hidden ${isCurrentTrack ? 'text-[var(--color-primary)] font-bold' : 'text-white/40'}`}>
+                <div className="w-8 text-center flex-shrink-0">
+                    <span className={`text-[13px] font-bold tabular-nums group-hover:hidden ${isCurrentTrack ? 'text-primary' : 'text-white/25'}`}>
                         {(index ?? 0) + 1}
                     </span>
-                    <Play className="h-4 w-4 text-white fill-white hidden group-hover:block mx-auto" />
+                    <Play className="h-4 w-4 text-white fill-white hidden group-hover:block mx-auto active:scale-90 transition-transform" />
                 </div>
             )}
 
             {/* Thumbnail */}
-            <div className={`relative ${compact ? 'h-10 w-10' : 'h-12 w-12'} rounded-lg overflow-hidden bg-white/[0.05] flex-shrink-0`}>
-                <Image src={track.thumbnail} alt={track.title} fill className="object-cover" sizes={compact ? "40px" : "48px"} />
+            <div className={`relative ${compact ? 'h-10 w-10' : 'h-12 w-12'} rounded-xl overflow-hidden bg-white/[0.05] flex-shrink-0 shadow-lg`}>
+                <Image src={track.thumbnail} alt={track.title} fill className="object-cover transition-transform duration-500 group-hover:scale-110" sizes={compact ? "40px" : "48px"} />
                 {isCurrentTrack && isPlaying && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <div className="flex items-end gap-[2px] h-3">
-                            <span className="eq-bar" style={{ animationDuration: '0.5s' }} />
-                            <span className="eq-bar" style={{ animationDuration: '0.7s' }} />
-                            <span className="eq-bar" style={{ animationDuration: '0.4s' }} />
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                        <div className="flex items-end gap-[2px] h-3.5">
+                            <span className="eq-bar w-[3px] rounded-full" style={{ animationDuration: '0.5s' }} />
+                            <span className="eq-bar w-[3px] rounded-full" style={{ animationDuration: '0.7s' }} />
+                            <span className="eq-bar w-[3px] rounded-full" style={{ animationDuration: '0.4s' }} />
                         </div>
                     </div>
                 )}
                 {!isCurrentTrack && (
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Play className="h-4 w-4 text-white fill-white" />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
+                        <Play className="h-4.5 w-4.5 text-white fill-white drop-shadow-md active:scale-90 transition-transform" />
                     </div>
                 )}
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-                <p className={`${compact ? 'text-xs' : 'text-[15px] leading-tight'} font-medium truncate ${isCurrentTrack ? 'text-[var(--color-primary)]' : 'text-white/90'}`}>
+                <p className={`${compact ? 'text-xs' : 'text-[15px] leading-snug'} font-bold truncate ${isCurrentTrack ? 'text-primary' : 'text-white/90'} tracking-tight`}>
                     {track.title}
                 </p>
-                <p className={`${compact ? 'text-[10px]' : 'text-[13px]'} text-white/50 truncate mt-0.5`}>
+                <p className={`${compact ? 'text-[10px]' : 'text-[13px]'} text-white/40 truncate mt-0.5 font-medium`}>
                     {track.artist}
                 </p>
             </div>
@@ -72,28 +72,28 @@ export function TrackRow({ track, index, showIndex = false, compact = false }: T
             {/* Like button */}
             <button
                 onClick={(e) => { e.stopPropagation(); toggleLike(track); }}
-                className={`p-1.5 rounded-full transition-all flex-shrink-0 ${liked ? 'opacity-100' : (isMounted ? 'opacity-100 sm:opacity-0 group-hover:opacity-100' : 'opacity-0')}`}
+                className={`p-2 rounded-full transition-all duration-300 flex-shrink-0 active:scale-75 ${liked ? 'opacity-100' : (isMounted ? 'opacity-100 sm:opacity-0 group-hover:opacity-100 hover:bg-white/10' : 'opacity-0')}`}
                 title={liked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}
             >
-                <Heart className={`h-4 w-4 transition-colors ${liked ? 'fill-[var(--color-primary)] text-[var(--color-primary)]' : 'text-white/40 hover:text-white'}`} />
+                <Heart className={`h-4.5 w-4.5 transition-colors ${liked ? 'fill-primary text-primary filter drop-shadow-[0_0_8px_rgba(0,255,255,0.3)]' : 'text-white/20 hover:text-white'}`} />
             </button>
 
             {/* Duration */}
-            <span className="text-[13px] text-white/30 tabular-nums flex-shrink-0">{track.duration}</span>
+            <span className="text-[13px] text-white/25 tabular-nums font-semibold flex-shrink-0">{track.duration}</span>
 
             {/* Actions */}
-            <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-1">
                 <button
                     onClick={(e) => { e.stopPropagation(); addToQueue(track); }}
-                    className="p-1.5 rounded-full hover:bg-white/10 transition-colors hidden sm:block"
+                    className="p-2 rounded-full hover:bg-white/10 transition-all active:scale-90 hidden sm:block"
                     title="Add to queue"
                 >
-                    <ListMusic className="h-3.5 w-3.5 text-white/40 hover:text-white" />
+                    <ListMusic className="h-4 w-4 text-white/30 hover:text-white" />
                 </button>
                 <TrackActionMenu
                     track={track}
-                    triggerClassName="rounded-full p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-                    iconClassName="h-3.5 w-3.5"
+                    triggerClassName="rounded-full p-2 text-white/30 transition-all hover:bg-white/10 hover:text-white active:scale-90"
+                    iconClassName="h-4 w-4"
                 />
             </div>
         </div>

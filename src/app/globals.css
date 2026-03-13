@@ -1,33 +1,32 @@
 @import "tailwindcss";
-@source "../";
 
 @theme {
-  /* ── Tidal-Inspired Palette ── */
+  /* ── Apple-Inspired Premium Palette ── */
   --color-background: #000000;
   --color-foreground: #ffffff;
 
   --color-primary: #00FFFF;
   --color-primary-foreground: #000000;
 
-  --color-secondary: #33cccc;
-  --color-secondary-foreground: #000000;
+  --color-secondary: #1C1C1E;
+  --color-secondary-foreground: #ffffff;
 
-  --color-card: #111111;
+  --color-card: #1C1C1E;
   --color-card-foreground: #ffffff;
 
-  --color-muted: #1a1a1a;
-  --color-muted-foreground: #999999;
+  --color-muted: #2C2C2E;
+  --color-muted-foreground: #8E8E93;
 
-  --color-accent: #00cccc;
-  --color-accent-foreground: #000000;
+  --color-accent: #0A84FF;
+  --color-accent-foreground: #ffffff;
 
   --color-player-accent: #00FFFF;
 
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
 }
 
 /* ── Base ── */
@@ -62,6 +61,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: var(--font-body), "Segoe UI", sans-serif;
+  width: 100%;
+}
+
+@layer base {
+  h1 { @apply text-3xl md:text-5xl lg:text-6xl font-extrabold tracking-tighter; }
+  h2 { @apply text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight; }
+  h3 { @apply text-xl md:text-2xl font-bold; }
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding-inline: 1rem;
+  }
 }
 
 body::before {
@@ -110,26 +122,20 @@ button {
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.4), transparent 85%);
 }
 
+/* ── Premium Surfaces ── */
 .shell-panel {
-  background:
-    linear-gradient(180deg, rgba(17, 21, 27, 0.96), rgba(9, 12, 17, 0.94));
-  backdrop-filter: blur(28px) saturate(1.4);
-  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  background: rgba(28, 28, 30, 0.75);
+  backdrop-filter: blur(40px) saturate(2);
+  -webkit-backdrop-filter: blur(40px) saturate(2);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 24px 90px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 .shell-panel-soft {
-  background:
-    linear-gradient(180deg, rgba(21, 26, 34, 0.82), rgba(11, 14, 20, 0.76));
-  backdrop-filter: blur(22px) saturate(1.35);
-  -webkit-backdrop-filter: blur(22px) saturate(1.35);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow:
-    0 18px 60px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: rgba(44, 44, 46, 0.4);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .premium-pill {
@@ -379,26 +385,27 @@ textarea:focus-visible {
 }
 
 /* ── Glassmorphism — premium frosted surfaces ── */
+/* ── Glassmorphism — Apple Frosted ── */
 .glass {
-  background: rgba(18, 22, 28, 0.84);
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(28, 28, 30, 0.65);
+  backdrop-filter: blur(40px) saturate(2);
+  -webkit-backdrop-filter: blur(40px) saturate(2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-strong {
-  background: rgba(20, 24, 31, 0.92);
-  backdrop-filter: blur(34px) saturate(1.5);
-  -webkit-backdrop-filter: blur(34px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(28, 28, 30, 0.85);
+  backdrop-filter: blur(50px) saturate(1.8);
+  -webkit-backdrop-filter: blur(50px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .glass-player {
-  background: rgba(10, 13, 18, 0.94);
-  backdrop-filter: blur(60px) saturate(1.6);
-  -webkit-backdrop-filter: blur(60px) saturate(1.6);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+  background: rgba(28, 28, 30, 0.75);
+  backdrop-filter: blur(60px) saturate(2);
+  -webkit-backdrop-filter: blur(60px) saturate(2);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .wave-progress-grid {
@@ -857,9 +864,9 @@ textarea:focus-visible {
 .splash-glow-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(30px);
-  opacity: 0.4;
-  animation: splash-float 6s ease-in-out infinite;
+  filter: blur(20px);
+  opacity: 0.25;
+  will-change: transform;
 }
 
 .splash-glow-orb-1 {
@@ -971,8 +978,8 @@ textarea:focus-visible {
 }
 
 @keyframes splash-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% { background-position: 150% 0; }
+  100% { background-position: -50% 0; }
 }
 
 @keyframes splash-wordmark-enter {

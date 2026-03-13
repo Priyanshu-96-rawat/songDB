@@ -212,7 +212,7 @@ export default function SearchPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                             {results.artists.map((artist) => (
                                 <Link key={artist.id} href={`/artist/${encodeURIComponent(artist.name)}`} className="flex flex-col items-center gap-3 group">
-                                    <div className="relative w-32 h-32 rounded-full overflow-hidden bg-[#1a1a1a] shadow-lg group-hover:shadow-xl transition-shadow">
+                                    <div className="relative w-32 h-32 rounded-full overflow-hidden bg-[#1a1a1a] shadow-lg group-hover:shadow-xl transition-shadow" style={{ position: 'relative' }}>
                                         {artist.thumbnail && (
                                             <Image src={artist.thumbnail} alt={artist.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
                                         )}
@@ -229,7 +229,7 @@ export default function SearchPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {results.albums.map((album) => (
                                 <Link key={album.id} href={`/album/${album.id}`} className="group text-left">
-                                    <div className="relative aspect-square rounded-xl overflow-hidden bg-[#1a1a1a] mb-3 shadow-lg group-hover:shadow-xl transition-shadow">
+                                    <div className="relative aspect-square rounded-xl overflow-hidden bg-[#1a1a1a] mb-3 shadow-lg group-hover:shadow-xl transition-shadow" style={{ position: 'relative' }}>
                                         {album.thumbnail && (
                                             <Image src={album.thumbnail} alt={album.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
                                         )}
@@ -246,7 +246,7 @@ export default function SearchPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {results.playlists.map((pl) => (
                                 <Link key={pl.id} href={`/playlist/${pl.id}`} className="group text-left">
-                                    <div className="relative aspect-square rounded-xl overflow-hidden bg-[#1a1a1a] mb-3 shadow-lg group-hover:shadow-xl transition-shadow">
+                                    <div className="relative aspect-square rounded-xl overflow-hidden bg-[#1a1a1a] mb-3 shadow-lg group-hover:shadow-xl transition-shadow" style={{ position: 'relative' }}>
                                         {pl.thumbnail && (
                                             <Image src={pl.thumbnail} alt={pl.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
                                         )}

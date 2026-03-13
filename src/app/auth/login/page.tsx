@@ -10,33 +10,52 @@ import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
-    const { signInWithGoogle, user } = useAuth();
+    const { signInWithGoogle, error: authError, user, loading: authLoading } = useAuth();
+    console.log("LoginPage Render State:", { hasUser: !!user, authLoading, authError });
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [localError, setLocalError] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const displayError = localError || authError;
 
     // Redirect if already logged in (must be in effect, not during render)
     useEffect(() => {
-        if (user) router.push('/');
+        console.log("LoginPage Auth State Changed. User:", user ? user.email : "None");
+        if (user) {
+            console.log("LoginPage: User detected, redirecting to /");
+            router.push('/');
+        }
     }, [user, router]);
-
-    if (user) return null;
 
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        setError("");
+        setIsSubmitting(true);
+        setLocalError("");
         try {
             await signInWithEmailAndPassword(auth, email, password);
+            console.log("LoginPage: Email login successful");
             router.push("/");
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Failed to log in");
+            const msg = err instanceof Error ? err.message : "Failed to log in";
+            console.error("LoginPage: Email login error:", msg);
+            setLocalError(msg);
         } finally {
-            setLoading(false);
+            setIsSubmitting(false);
         }
     };
+
+    const handleGoogleLogin = async () => {
+        console.log("LoginPage: 'Continue with Google' button clicked");
+        try {
+            await signInWithGoogle();
+        } catch (err: any) {
+            console.error("LoginPage: Google login button error:", err);
+        }
+    };
+
+    if (user) return null;
 
     return (
         <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4 relative overflow-hidden bg-background">
@@ -61,9 +80,9 @@ export default function LoginPage() {
                     <p className="text-white/50 text-sm mt-2">Log in to your SongDB account</p>
                 </div>
 
-                {error && (
+                {displayError && (
                     <div className="bg-red-500/20 border border-red-500/50 text-red-200 text-xs p-3 rounded-xl mb-6 text-center">
-                        {error}
+                        {displayError}
                     </div>
                 )}
 
@@ -100,10 +119,10 @@ export default function LoginPage() {
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={isSubmitting || authLoading}
                         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] disabled:opacity-50 mt-4 active:scale-95"
                     >
-                        {loading ? "Authenticating..." : "CONTINUE"}
+                        {isSubmitting || authLoading ? "Authenticating..." : "CONTINUE"}
                     </button>
                 </form>
 
@@ -117,8 +136,10 @@ export default function LoginPage() {
                 </div>
 
                 <button
-                    onClick={signInWithGoogle}
-                    className="w-full flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 py-3.5 rounded-2xl transition-colors text-sm font-medium"
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={isSubmitting || authLoading}
+                    className="w-full flex items-center justify-center gap-3 bg-secondary/10 hover:bg-secondary/20 text-white font-medium py-3 rounded-xl border border-white/5 transition-all disabled:opacity-50"
                 >
                     <Chrome className="w-4 h-4" />
                     Continue with Google

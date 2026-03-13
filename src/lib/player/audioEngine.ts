@@ -1,4 +1,4 @@
-import { useYouTubePlayerStore } from "@/store/youtubePlayer"
+import { useYouTubePlayerStore, type YouTubePlayerState } from "@/store/youtubePlayer"
 
 /**
  * AudioEngine (YouTube IFrame API)
@@ -91,9 +91,9 @@ class AudioEngine {
                     this.startProgressUpdates()
                 },
 
-                onStateChange: (event: any) => {
+                onStateChange: (event: { data: number }) => {
                     const state = event.data
-
+                    // YT.PlayerState: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
                     switch (state) {
                         case 1:
                             useYouTubePlayerStore.setState({
@@ -127,7 +127,7 @@ class AudioEngine {
                     }
                 },
 
-                onError: (event: any) => {
+                onError: (event: { data: number }) => {
                     console.error("[AudioEngine] Player Error:", event.data)
 
                     useYouTubePlayerStore.setState({
@@ -153,22 +153,21 @@ class AudioEngine {
 
             const currentTime = this.player.getCurrentTime()
             const duration = this.player.getDuration()
-
-            if (typeof currentTime === "number") {
-                useYouTubePlayerStore.setState({ progress: currentTime })
-            }
-
-            if (typeof duration === "number" && duration > 0) {
-                useYouTubePlayerStore.setState({ duration })
-            }
+            let bufferedPercent = 0
 
             if (typeof this.player.getVideoLoadedFraction === "function") {
-                const fraction = this.player.getVideoLoadedFraction()
-                useYouTubePlayerStore.setState({
-                    bufferedPercent: fraction * 100,
-                })
+                bufferedPercent = (this.player.getVideoLoadedFraction() || 0) * 100
             }
-        }, 500)
+
+            const updates: Partial<YouTubePlayerState & { bufferedPercent: number }> = {}
+            if (typeof currentTime === "number") updates.progress = currentTime
+            if (typeof duration === "number" && duration > 0) updates.duration = duration
+            if (bufferedPercent >= 0) updates.bufferedPercent = bufferedPercent
+
+            if (Object.keys(updates).length > 0) {
+                useYouTubePlayerStore.setState(updates as any)
+            }
+        }, 1000) // Update every 1 second for better performance
     }
 
     private stopProgressUpdates() {
@@ -233,9 +232,6 @@ class AudioEngine {
 
     preload(videoId: string) { }
 
-    setBassBoost(value: number) { }
-
-    setSoundProfile(profile: "balanced" | "enhanced") { }
 }
 
 export const audioEngine = new AudioEngine()

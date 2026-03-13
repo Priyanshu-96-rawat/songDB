@@ -84,7 +84,7 @@ All API responses map to the following schema:
 - **Auth Level**: Public / Rate Limited (High Bandwidth)
 - **Input Query**: `?id=VIDEO_ID`
 - **Output Data**: Binary Audio Stream / ArrayBuffer
-- **Description**: Resolves the highest-quality playable audio stream via `yt-dlp` metadata scoring, proxies the stream chunks to the frontend `HTMLAudioElement`, and exposes chosen codec/container/bitrate in response headers for debugging. Supports partial 206 responses.
+- **Description**: Resolves the highest-quality playable audio stream via direct extraction scoring, proxies the stream chunks to the frontend `HTMLAudioElement`, and exposes chosen codec/container/bitrate in response headers for debugging. Supports partial 206 responses.
 
 ### 10. Synced Lyrics `GET /api/youtube-music/lyrics`
 - **Method**: GET

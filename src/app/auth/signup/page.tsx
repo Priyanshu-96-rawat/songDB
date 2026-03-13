@@ -20,7 +20,11 @@ export default function SignupPage() {
 
     // Redirect if already logged in (must be in effect, not during render)
     useEffect(() => {
-        if (user) router.push('/');
+        console.log("SignupPage Auth State:", user ? `User: ${user.email}` : "No user");
+        if (user) {
+            console.log("SignupPage: User detected, redirecting to /");
+            router.push('/');
+        }
     }, [user, router]);
 
     if (user) return null;

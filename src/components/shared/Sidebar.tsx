@@ -87,7 +87,7 @@ export function Sidebar() {
         <div className="px-3">
           <p className="section-kicker">Menu</p>
         </div>
-        <nav className="mt-3 flex flex-1 flex-col gap-2">
+        <nav className="mt-3 flex flex-1 flex-col gap-2 overflow-y-auto scrollbar-hide">
           {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
             return (

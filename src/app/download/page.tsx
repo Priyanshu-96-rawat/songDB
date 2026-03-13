@@ -20,7 +20,8 @@ export default function DownloadPage() {
 
     useEffect(() => {
         setHasMounted(true);
-        if (typeof window !== "undefined" && window.matchMedia("(display-mode: standalone)").matches) {
+        const matchMedia = window.matchMedia("(display-mode: standalone)");
+        if (matchMedia.matches) {
             setIsInstalled(true);
         }
 

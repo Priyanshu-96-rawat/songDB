@@ -13,7 +13,7 @@ export interface YouTubeTrack {
     albumId?: string;
 }
 
-interface YouTubePlayerState {
+export interface YouTubePlayerState {
     // Current track
     currentTrack: YouTubeTrack | null;
     audioUrl: string | null;
@@ -47,8 +47,6 @@ interface YouTubePlayerState {
     isShuffled: boolean;
     sleepTimerMode: 'off' | 'minutes' | 'end_of_track';
     sleepTimerEndsAt: number | null;
-    bassBoost: number;
-    soundProfile: 'balanced' | 'enhanced';
 
     // Player visibility
     isPlayerVisible: boolean;
@@ -89,13 +87,9 @@ interface YouTubePlayerState {
     moveToTop: (index: number) => void;
     setSleepTimer: (mode: 'off' | 'minutes' | 'end_of_track', minutes?: number) => void;
     clearSleepTimer: () => void;
-    setBassBoost: (value: number) => void;
-    setSoundProfile: (profile: 'balanced' | 'enhanced') => void;
     prefetchNextTrack: () => void;
 }
 
-const SOUND_PROFILE_STORAGE_KEY = 'songdb_sound_profile';
-const BASS_BOOST_STORAGE_KEY = 'songdb_bass_boost';
 
 let sleepTimerTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -174,8 +168,6 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
         isShuffled: false,
         sleepTimerMode: 'off',
         sleepTimerEndsAt: null,
-        bassBoost: loadStoredValue<number>(BASS_BOOST_STORAGE_KEY, 4),
-        soundProfile: loadStoredValue<'balanced' | 'enhanced'>(SOUND_PROFILE_STORAGE_KEY, 'enhanced'),
         isPlayerVisible: false,
         expandedTab: 'player',
 
@@ -393,10 +385,11 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                 if (typeof window !== 'undefined') audioEngine.play(nextTrack.videoId);
                 get().fetchLyrics(nextTrack.videoId, nextTrack.durationSeconds);
 
-                if (remainingUpNext.length < 3) {
+                // Fetch more if we're running low
+                if (remainingUpNext.length <= 2) {
                     get().fetchUpNext(nextTrack.videoId);
                 }
-                get().prefetchNextTrack(); // Added here as upNextTracks changed
+                get().prefetchNextTrack();
                 return nextTrack;
             }
 
@@ -599,18 +592,6 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
             set({ sleepTimerMode: 'off', sleepTimerEndsAt: null });
         },
 
-        setBassBoost: (value) => {
-            const bassBoost = Math.min(Math.max(value, 0), 12);
-            audioEngine.setBassBoost(bassBoost);
-            saveStoredValue(BASS_BOOST_STORAGE_KEY, bassBoost);
-            set({ bassBoost });
-        },
-
-        setSoundProfile: (profile) => {
-            audioEngine.setSoundProfile(profile);
-            saveStoredValue(SOUND_PROFILE_STORAGE_KEY, profile);
-            set({ soundProfile: profile });
-        },
 
         prefetchNextTrack: () => {
             const { queue, upNextTracks, autoplayEnabled } = get();

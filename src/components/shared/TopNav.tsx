@@ -17,12 +17,18 @@ const routeCopy: Record<string, { kicker: string; title: string }> = {
 export function TopNav() {
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
+  
+  console.log("TopNav Render State:", { 
+    loading, 
+    user: user ? `${user.email} (${user.uid})` : "Null" 
+  });
+
   const current = routeCopy[pathname] ?? { kicker: "Listen", title: "SongDB" };
 
   return (
-    <nav className="sticky top-0 z-20 px-3 pt-3 md:px-5 md:pt-4">
+    <nav className="sticky top-0 z-[40] px-3 pt-3 md:px-5 md:pt-4">
       <div className="shell-panel-soft relative overflow-hidden rounded-[30px] px-4 py-4 md:px-6">
-        <div className="absolute inset-y-0 right-0 w-48 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),transparent_68%)]" />
+        <div className="absolute inset-y-0 right-0 w-48 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05),transparent_68%)] pointer-events-none" />
         <div className="relative flex items-center gap-4">
           <div className="hidden min-w-[10rem] xl:block">
             <p className="section-kicker">{current.kicker}</p>
@@ -30,7 +36,7 @@ export function TopNav() {
           </div>
 
           <div className="flex-1">
-            <SearchBar />
+            {pathname !== "/search" && <SearchBar />}
           </div>
 
           <div className="flex shrink-0 items-center gap-3">

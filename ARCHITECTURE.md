@@ -25,7 +25,7 @@ flowchart LR
     B --> C
     D --> E["Firebase Admin<br/>Firestore + Auth token verification"]
     D --> F["External Data Providers<br/>Last.fm, MusicBrainz, Deezer, RSS, News API, Cohere, YouTube"]
-    C --> G["YouTube Integration Layer<br/>youtubei.js + yt-dlp"]
+    C --> G["YouTube Integration Layer<br/>youtubei.js"]
     G --> H["YouTube / YouTube Music"]
     E --> I["Firestore"]
 ```
@@ -102,7 +102,7 @@ Current groups:
   - wrappers around `src/lib/youtube-stream.ts`
   - expose home shelves, explore shelves, artist/album/playlist data, lyrics, related items, suggestions, and up-next tracks
 - `/api/youtube-stream`
-  - resolves stream metadata via `yt-dlp` and proxies the selected audio stream
+  - resolves stream metadata and proxies the selected audio stream via direct YouTube extraction
   - supports `Range` headers so the browser can seek inside audio streams
 
 ### 2. Server Actions
@@ -152,7 +152,7 @@ This is the only part of the current codebase that persists reviews and cloud fa
 
 1. `useYouTubePlayerStore.playTrack()` sets the current track and queue state.
 2. The store asks `audioEngine` to play `/api/youtube-stream?id=<videoId>`.
-3. The route handler uses `yt-dlp` metadata to score available formats, prefers the best playable audio-only stream, and returns a partial-content capable response.
+3. The route handler resolves track metadata to score available formats, prefers the best playable audio-only stream, and returns a partial-content capable response.
 4. In parallel, the store fetches `/api/youtube-music/lyrics` and `/api/youtube-music/up-next`.
 5. The lyrics route returns caption-derived synced lyric lines when available, and falls back to duration-based estimated timings for official plain lyrics when needed.
 6. The player UI updates as audio events push progress and duration changes back into Zustand, and the active lyric line follows playback when synced data is available.

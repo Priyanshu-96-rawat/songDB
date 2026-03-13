@@ -5,7 +5,7 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-DNS-Prefetch-Control", value: "off" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
   { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
   { key: "Origin-Agent-Cluster", value: "?1" },
   {
