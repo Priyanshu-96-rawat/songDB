@@ -636,10 +636,13 @@ export async function getYTMusicHomeFeed(): Promise<Array<{ title: string; track
         { title: 'Bollywood Hits', query: 'latest hindi songs' },
         { title: 'Hip Hop', query: 'rap rotation essentials' },
         { title: 'Chill Vibes', query: 'indie chill late night songs' },
+        { title: 'Punjabi Hits', query: 'punjabi hits songs' },
+        { title: 'K-Pop Favorites', query: 'k-pop hits songs' },
+        { title: 'R&B Vibes', query: 'modern r&b soul essentials' },
     ];
 
     const results = await Promise.allSettled(
-        categories.map((category) => buildCuratedSongShelf(category.title, category.query))
+        categories.map((category) => buildCuratedSongShelf(category.title, category.query, 18))
     );
 
     for (const result of results) {
@@ -664,7 +667,7 @@ export async function getYTMusicExplore(): Promise<Array<{ title: string; tracks
     ];
 
     const results = await Promise.allSettled(
-        categories.map((category) => buildCuratedSongShelf(category.title, category.query))
+        categories.map((category) => buildCuratedSongShelf(category.title, category.query, 18))
     );
 
     for (const result of results) {

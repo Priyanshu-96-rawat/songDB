@@ -64,9 +64,9 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent z-[3]" />
 
-                <div className="container relative z-10 pb-12 flex gap-8 items-end">
+                <div className="container relative z-10 pb-8 md:pb-12 flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end text-center md:text-left mt-24 md:mt-0">
                     {/* Cover Art */}
-                    <div className="hidden md:block w-56 h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/10 shrink-0 relative">
+                    <div className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/10 shrink-0 relative">
                         {songImage ? (
                             <Image src={songImage} alt={song.name} fill className="object-cover" unoptimized />
                         ) : (
@@ -76,14 +76,14 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
                         )}
                     </div>
 
-                    <div className="flex-1">
-                        <span className="inline-block py-1 px-3 rounded-full bg-primary/15 text-primary text-[11px] font-bold uppercase tracking-[0.15em] border border-primary/20 mb-3">
+                    <div className="flex-1 w-full">
+                        <span className="inline-block py-1 px-3 rounded-full bg-primary/15 text-primary text-[11px] font-bold uppercase tracking-[0.15em] border border-primary/20 mb-3 mx-auto md:mx-0">
                             Song
                         </span>
-                        <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white tracking-tight leading-[0.95] mb-3">
+                        <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-white tracking-tight leading-[0.95] mb-3 px-4 md:px-0">
                             {song.name}
                         </h1>
-                        <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-muted-foreground">
                             <Link
                                 href={`/artist/${encodeURIComponent(songArtist)}`}
                                 className="text-lg font-bold text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
@@ -98,29 +98,31 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
                             )}
                         </div>
                         {/* Action Buttons */}
-                        <div className="flex gap-3 mt-6">
+                        <div className="flex flex-col sm:flex-row justify-center md:justify-start items-center gap-3 mt-6 w-full sm:w-auto px-4 md:px-0">
                             <a
                                 href={youtubeSearchUrl(song.name, songArtist)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2.5 bg-red-600 text-white px-6 py-3 rounded-full font-bold text-sm hover:scale-105 hover:bg-red-500 transition-all shadow-lg shadow-red-600/20"
+                                className="w-full sm:w-auto flex justify-center items-center gap-2.5 bg-red-600 text-white px-6 py-3 rounded-full font-bold text-sm hover:scale-105 hover:bg-red-500 transition-all shadow-lg shadow-red-600/20"
                             >
                                 <Youtube className="w-5 h-5" /> Watch on YouTube
                             </a>
                             <Link
                                 href={`/artist/${encodeURIComponent(songArtist)}`}
-                                className="flex items-center gap-2 bg-white/8 text-white/80 hover:bg-white/15 px-6 py-3 rounded-full font-medium text-sm transition-all border border-white/8 hover:border-white/15"
+                                className="w-full sm:w-auto flex justify-center items-center gap-2 bg-white/8 text-white/80 hover:bg-white/15 px-6 py-3 rounded-full font-medium text-sm transition-all border border-white/8 hover:border-white/15"
                             >
                                 View Artist
                             </Link>
-                            <FavoriteButton
-                                itemId={id}
-                                itemType="song"
-                                itemName={song.name}
-                                artistName={songArtist}
-                                imageUrl={songImage || undefined}
-                                size="lg"
-                            />
+                            <div className="w-full sm:w-auto flex justify-center mt-2 sm:mt-0">
+                                <FavoriteButton
+                                    itemId={id}
+                                    itemType="song"
+                                    itemName={song.name}
+                                    artistName={songArtist}
+                                    imageUrl={songImage || undefined}
+                                    size="lg"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

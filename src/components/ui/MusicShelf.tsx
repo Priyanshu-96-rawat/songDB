@@ -34,13 +34,13 @@ export function MusicShelf({
             {/* Header */}
             <div className="flex items-center justify-between mb-4 px-1">
                 <div>
-                    <h2 className="text-xl font-bold text-white">{title}</h2>
-                    {subtitle && <p className="text-sm text-white/30 mt-0.5">{subtitle}</p>}
+                    <h2 className="text-fluid-xl font-bold text-white">{title}</h2>
+                    {subtitle && <p className="text-fluid-xs text-white/30 mt-0.5">{subtitle}</p>}
                 </div>
                 {showMoreHref && (
                     <Link
                         href={showMoreHref}
-                        className="flex items-center gap-1 text-xs font-semibold text-white/40 hover:text-white transition-colors uppercase tracking-wider group"
+                        className="flex items-center gap-1 text-fluid-xs font-semibold text-white/40 hover:text-white transition-colors uppercase tracking-wider group"
                     >
                         More
                         <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -50,17 +50,17 @@ export function MusicShelf({
 
             {/* Content */}
             {layout === "scroll" && (
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
+                <div className="flex gap-fluid overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
                     {displayTracks.map((track, i) => (
-                        <MusicCard key={`${track.videoId}-${i}`} track={track} size={cardSize} />
+                        <MusicCard key={`${track.videoId}-${i}`} track={track} size={cardSize} priority={i < 4} />
                     ))}
                 </div>
             )}
 
             {layout === "grid" && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-fluid">
                     {displayTracks.map((track, i) => (
-                        <MusicCard key={`${track.videoId}-${i}`} track={track} size="md" />
+                        <MusicCard key={`${track.videoId}-${i}`} track={track} size="md" priority={i < 4} />
                     ))}
                 </div>
             )}

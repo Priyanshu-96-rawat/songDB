@@ -86,7 +86,7 @@ export default async function DiscoverPage() {
         `https://www.youtube.com/results?search_query=${encodeURIComponent(`${t} ${a} official`)}`;
 
     return (
-        <div className="w-full min-h-screen pb-24 pt-24 px-4 md:px-8 max-w-7xl mx-auto">
+        <div className="w-full min-h-screen pb-24 pt-24 px-fluid max-w-7xl mx-auto">
             <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-8 group">
                 <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 Home
@@ -100,7 +100,7 @@ export default async function DiscoverPage() {
                         <Sparkles className="w-5 h-5 text-primary" />
                         <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Today&apos;s Vibe</span>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-2">
+                    <h1 className="text-fluid-hero font-black text-white tracking-tight mb-2">
                         {moodConfig.emoji} {moodConfig.mood}
                     </h1>
                     <p className="text-muted-foreground text-sm max-w-xl">
@@ -110,33 +110,38 @@ export default async function DiscoverPage() {
                 </div>
 
                 <div className="glass rounded-xl overflow-hidden border border-white/5">
-                    <div className="grid grid-cols-[40px_1fr_1fr_50px] gap-3 px-4 py-3 border-b border-white/5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <div className="grid grid-cols-[32px_1fr_40px] sm:grid-cols-[40px_1fr_1fr_50px] gap-2 sm:gap-3 px-3 sm:px-4 py-3 border-b border-white/5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                         <span>#</span>
                         <span>Title</span>
-                        <span>Artist</span>
+                        <span className="hidden sm:block">Artist</span>
                         <span></span>
                     </div>
                     {enrichedMood.map((track: { id: string; title: string; artist: string; coverArt: string | null; rank: number }) => (
                         <div
                             key={'mood-' + track.id + track.rank}
-                            className="grid grid-cols-[40px_1fr_1fr_50px] gap-3 px-4 py-3 items-center border-b border-white/[0.03] hover:bg-white/[0.03] transition-colors group"
+                            className="grid grid-cols-[32px_1fr_40px] sm:grid-cols-[40px_1fr_1fr_50px] gap-2 sm:gap-3 px-3 sm:px-4 py-3 items-center border-b border-white/[0.03] hover:bg-white/[0.03] transition-colors group"
                         >
-                            <span className="text-sm font-bold text-muted-foreground group-hover:text-primary transition-colors">
+                            <span className="text-fluid-sm font-bold text-muted-foreground group-hover:text-primary transition-colors">
                                 {track.rank}
                             </span>
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-md overflow-hidden bg-muted shrink-0 relative">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                <div className="w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-md overflow-hidden bg-muted shrink-0 relative">
                                     {track.coverArt ? (
                                         <Image src={track.coverArt} alt="" fill className="object-cover" unoptimized />
                                     ) : (
                                         <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-primary/10 to-transparent flex items-center justify-center text-[10px] font-bold text-primary">♪</div>
                                     )}
                                 </div>
-                                <span className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                                    {track.title}
-                                </span>
+                                <div className="min-w-0">
+                                    <span className="text-fluid-sm font-semibold text-foreground truncate block group-hover:text-primary transition-colors">
+                                        {track.title}
+                                    </span>
+                                    <span className="text-fluid-xs text-muted-foreground truncate block sm:hidden">
+                                        {track.artist}
+                                    </span>
+                                </div>
                             </div>
-                            <Link href={`/artist/${encodeURIComponent(track.artist)}`} className="text-sm text-muted-foreground truncate hover:text-primary transition-colors">
+                            <Link href={`/artist/${encodeURIComponent(track.artist)}`} className="text-fluid-sm text-muted-foreground truncate hover:text-primary transition-colors hidden sm:block">
                                 {track.artist}
                             </Link>
                             <a
@@ -161,7 +166,7 @@ export default async function DiscoverPage() {
                         <Shuffle className="w-5 h-5 text-primary" />
                         <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Random Discovery</span>
                     </div>
-                    <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">
+                    <h2 className="text-fluid-3xl font-black text-white tracking-tight mb-2">
                         Top 50 in <span className="capitalize text-primary">{randomGenre}</span>
                     </h2>
                     <p className="text-muted-foreground text-sm max-w-xl">
@@ -170,7 +175,7 @@ export default async function DiscoverPage() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-fluid">
                     {enrichedRandom.map((track: { id: string; title: string; artist: string; coverArt: string | null; rank: number }) => (
                         <SongCard
                             key={'rand-' + track.id + track.rank}

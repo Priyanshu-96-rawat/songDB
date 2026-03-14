@@ -26,7 +26,7 @@ export function PlayerBar() {
             <div className="container mx-auto max-w-7xl flex items-center justify-between gap-4">
 
                 {/* Left: Song Info */}
-                <div className="flex items-center gap-3 w-1/4 min-w-[200px]">
+                <div className="flex items-center gap-3 w-1/4 min-w-0">
                     <div className="relative h-14 w-14 rounded-md overflow-hidden bg-muted flex-shrink-0 border border-white/5">
                         <Image
                             src={currentSong.coverArt || "/api/placeholder/400/400"}
@@ -74,7 +74,7 @@ export function PlayerBar() {
                 </div>
 
                 {/* Right: Extra Controls */}
-                <div className="flex items-center justify-end w-1/4 min-w-[150px] gap-2">
+                <div className="flex items-center justify-end w-1/4 min-w-0 gap-2">
                     <Volume2 className="h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors" />
                     <div className="h-1.5 w-24 bg-muted rounded-full relative overflow-hidden">
                         <div className="absolute top-0 left-0 bottom-0 w-2/3 bg-foreground rounded-full" />
@@ -85,3 +85,4 @@ export function PlayerBar() {
         </div>
     );
 }
+

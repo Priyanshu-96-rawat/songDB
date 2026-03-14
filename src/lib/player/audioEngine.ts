@@ -3,14 +3,20 @@ import { useYouTubePlayerStore, type YouTubePlayerState } from "@/store/youtubeP
 /**
  * AudioEngine (YouTube IFrame API)
  * Uses the official YouTube IFrame API for playback.
+ * 
+ * Singleton is persisted on `window.__audioEngine` to survive HMR
+ * and prevent duplicate YT IFrame players from overlapping audio.
  */
 
 declare global {
     interface Window {
         onYouTubeIframeAPIReady: () => void
         YT: any
+        __audioEngine?: AudioEngine
     }
 }
+
+const CONTAINER_ID = "yt-player-container"
 
 class AudioEngine {
     private player: any = null
@@ -18,7 +24,6 @@ class AudioEngine {
     private isPlayerReady = false
     private currentVideoId: string | null = null
     private progressInterval: ReturnType<typeof setInterval> | null = null
-    private containerId = "yt-player-container"
 
     constructor() {
         if (typeof window !== "undefined") {
@@ -26,12 +31,31 @@ class AudioEngine {
         }
     }
 
-    private loadApi() {
-        if (this.isApiLoaded) return
+    /** Destroy the player cleanly (used during HMR cleanup) */
+    destroy() {
+        this.stopProgressUpdates()
+        if (this.player) {
+            try {
+                this.player.stopVideo?.()
+                this.player.destroy?.()
+            } catch {
+                // Ignore destroy errors
+            }
+            this.player = null
+        }
+        this.isPlayerReady = false
+    }
 
-        if (!document.getElementById(this.containerId)) {
+    private loadApi() {
+        // If the YT API is already loaded (e.g. from a previous HMR cycle), mark it
+        if (typeof window.YT !== "undefined" && window.YT.Player) {
+            this.isApiLoaded = true
+        }
+
+        // Create container if it doesn't exist
+        if (!document.getElementById(CONTAINER_ID)) {
             const container = document.createElement("div")
-            container.id = this.containerId
+            container.id = CONTAINER_ID
             container.style.position = "fixed"
             container.style.top = "-9999px"
             container.style.left = "-9999px"
@@ -40,6 +64,20 @@ class AudioEngine {
             container.style.opacity = "0"
             container.style.pointerEvents = "none"
             document.body.appendChild(container)
+        }
+
+        // Only inject the script once — check for existing script tag
+        if (this.isApiLoaded) return
+        const existingScript = document.querySelector('script[src*="youtube.com/iframe_api"]')
+        if (existingScript) {
+            // Script tag exists but API not ready yet — wait for callback
+            const origCb = window.onYouTubeIframeAPIReady
+            window.onYouTubeIframeAPIReady = () => {
+                origCb?.()
+                this.isApiLoaded = true
+                if (this.currentVideoId) this.initPlayer(this.currentVideoId)
+            }
+            return
         }
 
         const tag = document.createElement("script")
@@ -63,11 +101,24 @@ class AudioEngine {
         }
 
         if (this.player) {
-            this.player.loadVideoById(videoId)
+            try {
+                this.player.loadVideoById(videoId)
+            } catch {
+                // Player in bad state, recreate
+                this.player = null
+                this.isPlayerReady = false
+                this.initPlayer(videoId)
+            }
             return
         }
 
-        this.player = new window.YT.Player(this.containerId, {
+        // Ensure the container is empty (clear any leftover iframe from a previous instance)
+        const container = document.getElementById(CONTAINER_ID)
+        if (container) {
+            container.innerHTML = ""
+        }
+
+        this.player = new window.YT.Player(CONTAINER_ID, {
             height: "1",
             width: "1",
             videoId,
@@ -164,7 +215,7 @@ class AudioEngine {
             if (Object.keys(updates).length > 0) {
                 useYouTubePlayerStore.setState(updates as any)
             }
-        }, 1000) // Update every 1 second for better performance
+        }, 1000)
     }
 
     private stopProgressUpdates() {
@@ -185,7 +236,10 @@ class AudioEngine {
             try {
                 this.player.loadVideoById(videoId)
             } catch {
-                // Silently handle load errors or state conflicts
+                // Player in bad state, recreate
+                this.player = null
+                this.isPlayerReady = false
+                this.initPlayer(videoId)
             }
         }
 
@@ -231,4 +285,20 @@ class AudioEngine {
 
 }
 
-export const audioEngine = new AudioEngine()
+// Persist singleton on window to survive HMR — destroy old instance first
+function getOrCreateEngine(): AudioEngine {
+    if (typeof window === "undefined") {
+        return new AudioEngine()
+    }
+
+    // Destroy previous instance if exists (HMR scenario)
+    if (window.__audioEngine) {
+        window.__audioEngine.destroy()
+    }
+
+    const engine = new AudioEngine()
+    window.__audioEngine = engine
+    return engine
+}
+
+export const audioEngine = getOrCreateEngine()

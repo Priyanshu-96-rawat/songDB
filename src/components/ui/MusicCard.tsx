@@ -14,9 +14,10 @@ interface MusicCardProps {
     track: YouTubeTrack;
     size?: "sm" | "md" | "lg";
     subtitle?: string;
+    priority?: boolean;
 }
 
-export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
+export function MusicCard({ track, size = "md", subtitle, priority: isPriority = false }: MusicCardProps) {
     const { playTrack, currentTrack, isPlaying } = useYouTubePlayerStore();
     const { isLiked, toggleLike } = useLibraryStore();
     const [imageFailed, setImageFailed] = useState(false);
@@ -26,8 +27,11 @@ export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
     const liked = isMounted ? isLiked(track.videoId) : false;
     const hasArtwork = Boolean(track.thumbnail) && !imageFailed;
 
-    const sizeMap = { sm: "w-36", md: "w-44", lg: "w-52" };
-    const imgSizeMap = { sm: "h-36", md: "h-44", lg: "h-52" };
+    const fluidWidths = {
+        sm: "clamp(120px, 28vw, 144px)",
+        md: "clamp(130px, 30vw, 176px)",
+        lg: "clamp(150px, 32vw, 208px)",
+    };
     const accentButtonStyle = {
         backgroundColor: "var(--color-primary)",
         color: "var(--color-primary-foreground)",
@@ -40,7 +44,8 @@ export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ y: -4 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className={`${sizeMap[size]} flex-shrink-0 group text-left focus:outline-none`}
+            style={{ width: fluidWidths[size] }}
+            className="flex-shrink-0 group text-left focus:outline-none"
             role="button"
             tabIndex={0}
             onKeyDown={(event) => {
@@ -53,7 +58,7 @@ export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
             data-track-id={track.videoId}
             data-track-title={track.title}
         >
-            <div className={`relative ${imgSizeMap[size]} ${sizeMap[size]} rounded-xl bg-white/[0.05] mb-3 shadow-md transition-all duration-300 group-hover:shadow-2xl ring-1 ring-white/5`}>
+            <div className="relative rounded-xl bg-white/[0.05] mb-3 shadow-md transition-all duration-300 group-hover:shadow-2xl ring-1 ring-white/5" style={{ width: '100%', aspectRatio: '1 / 1' }}>
                 <div className="absolute inset-0 rounded-xl overflow-hidden">
                     {hasArtwork ? (
                         <Image
@@ -63,6 +68,7 @@ export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                             sizes={size === "lg" ? "208px" : size === "md" ? "176px" : "144px"}
                             onError={() => setImageFailed(true)}
+                            {...(isPriority ? { priority: true, loading: "eager" as const } : {})}
                         />
                     ) : (
                         <div
@@ -125,10 +131,10 @@ export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
                 )}
             </div>
 
-            <p className={`text-[14px] font-semibold truncate ${isCurrentTrack ? 'text-[var(--color-primary)]' : 'text-white/90'}`}>
+            <p className={`text-fluid-sm font-semibold truncate ${isCurrentTrack ? 'text-[var(--color-primary)]' : 'text-white/90'}`}>
                 {track.title}
             </p>
-            <p className="text-[13px] text-white/45 truncate mt-0.5">
+            <p className="text-fluid-xs text-white/45 truncate mt-0.5">
                 {subtitle || track.artist}
             </p>
         </motion.div>

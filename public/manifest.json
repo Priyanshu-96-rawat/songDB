@@ -1,11 +1,13 @@
 {
     "name": "SongDB - Music Streaming",
     "short_name": "SongDB",
-    "description": "A complete music streaming platform. Made by Antigravity by Priyanshu.",
+    "id": "songdb-pwa",
+    "description": "A complete music streaming platform by Priyanshu.",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#000000",
-    "theme_color": "#FF0000",
+    "background_color": "#050508",
+    "theme_color": "#8B5CF6",
     "orientation": "any",
     "icons": [
         {

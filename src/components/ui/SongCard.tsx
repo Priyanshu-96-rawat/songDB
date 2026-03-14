@@ -69,7 +69,7 @@ export function SongCard({ id, title, artist, coverArt, image, playCount, rank, 
     return (
         <Link
             href={`/song/${id}`}
-            className="group relative block w-[180px] shrink-0 rounded-xl bg-card/40 p-3 card-3d"
+            className="group relative block w-[clamp(140px,40vw,180px)] shrink-0 rounded-xl bg-card/40 p-3 card-3d"
         >
             {/* Rank badge */}
             {rank && (

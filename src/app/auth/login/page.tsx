@@ -43,10 +43,16 @@ export default function LoginPage() {
     };
 
     const handleGoogleLogin = async () => {
+        setIsSubmitting(true);
+        setLocalError("");
         try {
             await signInWithGoogle();
         } catch (err: any) {
-            // Catch error for AuthContext to handle
+            console.error("Google sign-in error:", err);
+            const msg = err instanceof Error ? err.message : "Google sign-in failed";
+            setLocalError(msg);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 

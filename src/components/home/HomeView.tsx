@@ -336,11 +336,11 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               {heroLabel}
             </span>
-            <p className="mb-3 text-sm font-medium text-white/45">{displayGreeting}</p>
-            <h1 className="font-display max-w-3xl text-4xl leading-[0.94] text-white md:text-6xl">
+            <p className="mb-3 text-fluid-sm font-medium text-white/45">{displayGreeting}</p>
+            <h1 className="font-display max-w-3xl text-fluid-hero leading-[0.94] text-white">
               {heroTitle}
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-white/60 md:text-base">
+            <p className="mt-4 max-w-2xl text-fluid-sm leading-6 text-white/60">
               {heroCopy}
             </p>
 
@@ -390,7 +390,7 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
             )}
 
             {featuredTrack && (
-              <div className="mt-8 grid gap-3 md:grid-cols-3">
+              <div className="mt-8 grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                 {[featuredTrack, ...spotlightTracks.slice(0, 2)].map((track, index) => (
                   <button
                     key={track.videoId}
@@ -430,7 +430,7 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
               Quick Dial
             </span>
           </div>
-          <p className="text-xs font-medium text-white/35 uppercase tracking-widest">
+          <p className="text-fluid-xs font-medium text-white/35 uppercase tracking-widest">
             Based on your activity
           </p>
         </div>
@@ -483,10 +483,10 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
                 Music Flow
               </span>
-              <h2 className="font-display text-3xl leading-none text-white md:text-[2.6rem]">
+              <h2 className="font-display text-fluid-3xl leading-none text-white">
                 A mixed stream across genre, language, artist, country, time, and category.
               </h2>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/55">
+              <p className="mt-3 max-w-3xl text-fluid-sm leading-6 text-white/55">
                 This is the Resso-style lane: scrollable variety first, then one-tap playback that keeps the rest of the visible feed queued behind the current song.
               </p>
             </div>
@@ -543,7 +543,7 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, delay: index * 0.02 }}
                 onClick={() => playFlowFeed(index)}
-                className="group relative min-h-[18rem] overflow-hidden rounded-[30px] border border-white/10 text-left transition hover:border-white/18 hover:-translate-y-0.5"
+                className="group relative min-h-[14rem] sm:min-h-[18rem] overflow-hidden rounded-[30px] border border-white/10 text-left transition hover:border-white/18 hover:-translate-y-0.5"
               >
                 <div
                   className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-[1.03]"
@@ -570,10 +570,10 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/35">
                       {item.context}
                     </p>
-                    <h3 className="mt-2 max-w-xl text-2xl font-semibold tracking-tight text-white">
+                    <h3 className="mt-2 max-w-xl text-fluid-2xl font-semibold tracking-tight text-white">
                       {item.track.title}
                     </h3>
-                    <p className="mt-2 text-sm text-white/58">
+                    <p className="mt-2 text-fluid-sm text-white/58">
                       {item.track.artist} · {item.track.duration}
                     </p>
                     <p className="mt-4 max-w-xl text-sm leading-6 text-white/62">
@@ -619,7 +619,7 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
         <div className="mt-8">
           <div className="mb-4 flex items-center gap-2 px-1">
             <TrendingUp className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold text-white">Discovery Lanes</h2>
+            <h2 className="text-fluid-xl font-bold text-white">Discovery Lanes</h2>
           </div>
           <div className="grid gap-6 xl:grid-cols-2">
             {exploreShelves.map((shelf, index) => (

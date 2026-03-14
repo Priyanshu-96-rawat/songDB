@@ -61,7 +61,7 @@ export function Sidebar() {
   return (
     <>
       <MobileNav />
-      <aside className="fixed bottom-28 left-3 top-3 z-30 hidden w-[4.5rem] flex-col rounded-[28px] shell-panel p-2.5 sm:flex md:hidden">
+      <aside className="fixed bottom-28 left-3 top-3 z-30 hidden w-[4.5rem] flex-col rounded-[28px] shell-panel p-2.5 sm:flex lg:hidden">
         <div className="flex justify-center pb-3">
           <BrandMark compact />
         </div>
@@ -95,7 +95,7 @@ export function Sidebar() {
         )}
       </aside>
 
-      <aside className="fixed bottom-24 left-4 top-4 z-30 hidden w-[17.75rem] flex-col rounded-[34px] shell-panel-soft px-3 py-4 md:flex">
+      <aside className="fixed bottom-24 left-4 top-4 z-30 hidden w-[17.75rem] flex-col rounded-[34px] shell-panel-soft px-3 py-4 lg:flex">
         <div className="mb-6 flex items-center gap-3 px-3">
           <BrandMark />
           <div>
@@ -130,8 +130,8 @@ export function Sidebar() {
                   <Icon className="h-[18px] w-[18px]" />
                 </span>
                 <div className="flex-1">
-                  <p className="text-[15px] font-semibold tracking-tight">{label}</p>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/28">
+                  <p className="text-fluid-base font-semibold tracking-tight">{label}</p>
+                  <p className="text-[10px] xl:text-[11px] uppercase tracking-[0.22em] text-white/28">
                     {href === "/" ? "Start here" : href === "/search" ? "Find anything" : href === "/explore" ? "Editorial lanes" : "Saved collection"}
                   </p>
                 </div>

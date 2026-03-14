@@ -166,7 +166,7 @@ export default function SearchPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.4 }}
-            className="px-6 py-6"
+            className="px-fluid py-6"
         >
             <div className="relative max-w-2xl mb-8">
                 <form onSubmit={handleSearch}>
@@ -183,7 +183,7 @@ export default function SearchPage() {
                             onFocus={() => setShowSuggestions(true)}
                             onKeyDown={handleKeyDown}
                             placeholder="Search songs, artists, albums..."
-                            className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/[0.06] border border-white/[0.06] text-white text-sm placeholder:text-white/25 outline-none focus:border-white/15 focus:bg-white/[0.08] transition-all"
+                            className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/[0.06] border border-white/[0.06] text-white text-fluid-sm placeholder:text-white/25 outline-none focus:border-white/15 focus:bg-white/[0.08] transition-all"
                         />
                         {loading && <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-primary" />}
                     </div>
@@ -248,23 +248,23 @@ export default function SearchPage() {
                     )}
 
                     {activeTab === "artists" && results.artists.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-fluid">
                             {results.artists.map((artist) => (
                                 <Link key={artist.id} href={`/artist/${encodeURIComponent(artist.name)}`} className="flex flex-col items-center gap-3 group">
-                                    <div className="relative w-32 h-32 rounded-full overflow-hidden bg-[#1a1a1a] shadow-lg group-hover:shadow-xl transition-shadow" style={{ position: 'relative' }}>
+                                    <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-[#1a1a1a] shadow-lg group-hover:shadow-xl transition-shadow" style={{ position: 'relative' }}>
                                         {artist.thumbnail && (
                                             <Image src={artist.thumbnail} alt={artist.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
                                         )}
                                     </div>
-                                    <p className="text-sm font-medium text-white text-center truncate max-w-[120px]">{artist.name}</p>
-                                    {artist.subscribers && <p className="text-xs text-white/30">{artist.subscribers}</p>}
+                                    <p className="text-fluid-sm font-medium text-white text-center truncate max-w-[120px]">{artist.name}</p>
+                                    {artist.subscribers && <p className="text-fluid-xs text-white/30">{artist.subscribers}</p>}
                                 </Link>
                             ))}
                         </div>
                     )}
 
                     {activeTab === "albums" && results.albums.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-fluid">
                             {results.albums.map((album) => (
                                 <Link key={album.id} href={`/album/${album.id}`} className="group text-left">
                                     <div className="relative aspect-square rounded-xl overflow-hidden bg-[#1a1a1a] mb-3 shadow-lg group-hover:shadow-xl transition-shadow" style={{ position: 'relative' }}>
@@ -272,15 +272,15 @@ export default function SearchPage() {
                                             <Image src={album.thumbnail} alt={album.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
                                         )}
                                     </div>
-                                    <p className="text-sm font-medium text-white truncate">{album.title}</p>
-                                    <p className="text-xs text-white/40 truncate">{album.artist}{album.year ? ` · ${album.year}` : ''}</p>
+                                    <p className="text-fluid-sm font-medium text-white truncate">{album.title}</p>
+                                    <p className="text-fluid-xs text-white/40 truncate">{album.artist}{album.year ? ` · ${album.year}` : ''}</p>
                                 </Link>
                             ))}
                         </div>
                     )}
 
                     {activeTab === "playlists" && results.playlists.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-fluid">
                             {results.playlists.map((pl) => (
                                 <Link key={pl.id} href={`/playlist/${pl.id}`} className="group text-left">
                                     <div className="relative aspect-square rounded-xl overflow-hidden bg-[#1a1a1a] mb-3 shadow-lg group-hover:shadow-xl transition-shadow" style={{ position: 'relative' }}>
@@ -288,8 +288,8 @@ export default function SearchPage() {
                                             <Image src={pl.thumbnail} alt={pl.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
                                         )}
                                     </div>
-                                    <p className="text-sm font-medium text-white truncate">{pl.title}</p>
-                                    <p className="text-xs text-white/40 truncate">{pl.author}{pl.trackCount ? ` · ${pl.trackCount} songs` : ''}</p>
+                                    <p className="text-fluid-sm font-medium text-white truncate">{pl.title}</p>
+                                    <p className="text-fluid-xs text-white/40 truncate">{pl.author}{pl.trackCount ? ` · ${pl.trackCount} songs` : ''}</p>
                                 </Link>
                             ))}
                         </div>

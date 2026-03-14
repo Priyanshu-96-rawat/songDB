@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#000000',
+  themeColor: '#8B5CF6',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -53,12 +53,12 @@ export default function RootLayout({
           <div className="flex min-h-screen flex-col">
             <Sidebar />
             
-            <div className="relative z-10 flex flex-1 flex-col pl-0 sm:pl-[5.5rem] md:pl-[19.25rem]">
+            <div className="relative z-10 flex flex-1 flex-col pl-0 sm:pl-[5.5rem] lg:pl-[19.25rem]">
               <TopNav />
-              <main className="flex-1 px-4 py-6 md:px-8">
+              <main className="flex-1 px-3 sm:px-4 py-4 sm:py-6 md:px-8 pb-32 sm:pb-8">
                 {children}
               </main>
-              <footer className="px-3 pb-32 pt-2 md:px-5 md:pb-6">
+              <footer className="px-3 pb-36 sm:pb-32 lg:pb-6 pt-2 lg:px-5">
                 <div className="shell-panel-soft flex items-center justify-center rounded-[26px] px-4 py-3 text-[11px] text-white/26">
                   <p className="uppercase tracking-[0.24em] text-white/18 text-center w-full">
                     Powered by YouTube Music
@@ -75,3 +75,4 @@ export default function RootLayout({
     </html>
   );
 }
+

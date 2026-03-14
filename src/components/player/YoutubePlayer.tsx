@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -159,6 +160,143 @@ function TrackItem({
     );
 }
 
+/* ─── Virtualized Queue Panel ────────────────────────────────────── */
+
+type VirtualItem =
+    | { type: "queue-header"; queueLength: number }
+    | { type: "queue-track"; track: YouTubeTrack; index: number }
+    | { type: "queue-empty" }
+    | { type: "upnext-header"; loading: boolean }
+    | { type: "upnext-track"; track: YouTubeTrack }
+    | { type: "upnext-empty" };
+
+function QueuePanel({
+    queue,
+    upNextTracks,
+    isLoadingUpNext,
+    currentTrack,
+    isPlaying,
+    playTrack,
+    moveToTop,
+    removeFromQueue,
+    clearQueue,
+}: {
+    queue: YouTubeTrack[];
+    upNextTracks: YouTubeTrack[];
+    isLoadingUpNext: boolean;
+    currentTrack: YouTubeTrack;
+    isPlaying: boolean;
+    playTrack: (t: YouTubeTrack) => void;
+    moveToTop: (i: number) => void;
+    removeFromQueue: (i: number) => void;
+    clearQueue: () => void;
+}) {
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Build a flat virtual list: [queue-header, ...queue-tracks | queue-empty, upnext-header, ...upnext-tracks | upnext-empty]
+    const items = useMemo<VirtualItem[]>(() => {
+        const list: VirtualItem[] = [];
+        list.push({ type: "queue-header", queueLength: queue.length });
+        if (queue.length === 0) {
+            list.push({ type: "queue-empty" });
+        } else {
+            queue.forEach((track, index) => list.push({ type: "queue-track", track, index }));
+        }
+        list.push({ type: "upnext-header", loading: isLoadingUpNext });
+        if (upNextTracks.length === 0 && !isLoadingUpNext) {
+            list.push({ type: "upnext-empty" });
+        } else {
+            upNextTracks.forEach((track) => list.push({ type: "upnext-track", track }));
+        }
+        return list;
+    }, [queue, upNextTracks, isLoadingUpNext]);
+
+    const virtualizer = useVirtualizer({
+        count: items.length,
+        getScrollElement: () => scrollRef.current,
+        estimateSize: useCallback((index: number) => {
+            const item = items[index];
+            if (!item) return 56;
+            if (item.type === "queue-header" || item.type === "upnext-header") return 36;
+            if (item.type === "queue-empty" || item.type === "upnext-empty") return 56;
+            return 60; // track item height
+        }, [items]),
+        overscan: 5,
+    });
+
+    return (
+        <div ref={scrollRef} className="h-full overflow-y-auto scrollbar-hide pb-12 sm:pb-0">
+            <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+                {virtualizer.getVirtualItems().map((vRow) => {
+                    const item = items[vRow.index];
+                    if (!item) return null;
+                    return (
+                        <div
+                            key={vRow.key}
+                            data-index={vRow.index}
+                            ref={virtualizer.measureElement}
+                            className="absolute left-0 top-0 w-full"
+                            style={{ transform: `translateY(${vRow.start}px)` }}
+                        >
+                            {item.type === "queue-header" && (
+                                <div className="flex items-center justify-between mb-2 px-1 pt-1">
+                                    <p className="text-[10px] sm:text-xs uppercase tracking-[0.25em] text-white/30">Queue</p>
+                                    {item.queueLength > 0 && (
+                                        <button type="button" onClick={clearQueue} className="text-[10px] sm:text-xs text-white/40 transition hover:text-white">Clear</button>
+                                    )}
+                                </div>
+                            )}
+                            {item.type === "queue-empty" && (
+                                <p className="py-6 text-center text-xs text-white/25">No manual queue.</p>
+                            )}
+                            {item.type === "queue-track" && (
+                                <div className="pb-1.5">
+                                    <TrackItem
+                                        track={item.track}
+                                        active={currentTrack.videoId === item.track.videoId}
+                                        playing={isPlaying}
+                                        onClick={() => playTrack(item.track)}
+                                        actions={
+                                            <div className="flex items-center gap-0.5">
+                                                <button type="button" onClick={(e) => { e.stopPropagation(); moveToTop(item.index); }} className="rounded-full p-1.5 text-white/30 transition hover:bg-white/10 hover:text-white" aria-label="Move to top">
+                                                    <ArrowUp className="h-3.5 w-3.5" />
+                                                </button>
+                                                <button type="button" onClick={(e) => { e.stopPropagation(); removeFromQueue(item.index); }} className="rounded-full p-1.5 text-white/30 transition hover:bg-white/10 hover:text-white" aria-label="Remove">
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        }
+                                    />
+                                </div>
+                            )}
+                            {item.type === "upnext-header" && (
+                                <div className="flex items-center justify-between mb-2 mt-4 px-1">
+                                    <p className="text-[10px] sm:text-xs uppercase tracking-[0.25em] text-white/30">Up Next</p>
+                                    {item.loading && <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-[var(--color-primary)]" />}
+                                </div>
+                            )}
+                            {item.type === "upnext-empty" && (
+                                <p className="py-6 text-center text-xs text-white/25">Recommendations load with context.</p>
+                            )}
+                            {item.type === "upnext-track" && (
+                                <div className="pb-1.5">
+                                    <TrackItem
+                                        track={item.track}
+                                        active={currentTrack.videoId === item.track.videoId}
+                                        playing={isPlaying}
+                                        onClick={() => playTrack(item.track)}
+                                        actions={<TrackActionMenu track={item.track} />}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 export default function YoutubePlayer() {
     const {
         currentTrack,
@@ -220,13 +358,11 @@ export default function YoutubePlayer() {
         [lyrics, progress]
     );
 
-    const [prevIsPlayerVisible, setPrevIsPlayerVisible] = useState(isPlayerVisible);
-    if (isPlayerVisible !== prevIsPlayerVisible) {
-        setPrevIsPlayerVisible(isPlayerVisible);
-        if (!isPlayerVisible) {
+    useEffect(() => {
+        if (!isPlayerVisible && isExpanded) {
             setIsExpanded(false);
         }
-    }
+    }, [isPlayerVisible, isExpanded, setIsExpanded]);
 
     useEffect(() => {
         if (!isExpanded || expandedTab !== "lyrics" || activeLyricIndex < 0) return;
@@ -363,7 +499,7 @@ export default function YoutubePlayer() {
                                 {/* LEFT: Player column */}
                                 <div className="flex flex-col items-center justify-center flex-1 min-h-0 px-6 pb-4 lg:pb-0 lg:px-0 overflow-y-auto scrollbar-hide">
                                     {/* Album art */}
-                                    <div className="w-full max-w-[340px] lg:max-w-[420px] mx-auto">
+                                    <div className="w-full max-w-[clamp(200px,60vw,340px)] lg:max-w-[420px] mx-auto">
                                         <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-white/[0.04] shadow-2xl">
                                             <Image src={currentTrack.thumbnail} alt={currentTrack.title} fill priority className="object-cover" sizes="(max-width: 1024px) 80vw, 420px" />
                                             <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
@@ -374,13 +510,13 @@ export default function YoutubePlayer() {
                                     </div>
 
                                     {/* Track info */}
-                                    <div className="mt-6 w-full max-w-[340px] lg:max-w-[420px] mx-auto min-w-0">
-                                        <h2 className="truncate text-xl font-bold text-white md:text-2xl">{currentTrack.title}</h2>
-                                        <p className="mt-0.5 truncate text-sm text-white/50">{currentTrack.artist}</p>
+                                    <div className="mt-fluid w-full max-w-[clamp(240px,70vw,340px)] lg:max-w-[420px] mx-auto min-w-0 text-center lg:text-left">
+                                        <h2 className="truncate text-fluid-2xl font-bold text-white">{currentTrack.title}</h2>
+                                        <p className="mt-0.5 truncate text-fluid-base text-white/50">{currentTrack.artist}</p>
                                     </div>
 
                                     {/* Progress bar */}
-                                    <div className="mt-5 w-full max-w-[340px] lg:max-w-[420px] mx-auto">
+                                    <div className="mt-fluid w-full max-w-[clamp(260px,80vw,340px)] lg:max-w-[420px] mx-auto">
                                         <ProgressBar
                                             progressPercent={progressPercent}
                                             bufferedPercent={bufferedPercent}
@@ -397,37 +533,37 @@ export default function YoutubePlayer() {
                                     </div>
 
                                     {/* Playback controls */}
-                                    <div className="mt-5 flex w-full max-w-[340px] lg:max-w-[420px] mx-auto items-center justify-between">
+                                    <div className="mt-fluid flex w-full max-w-[clamp(260px,80vw,340px)] lg:max-w-[420px] mx-auto items-center justify-between">
                                         <button type="button" onClick={toggleShuffle} className={`p-2 transition ${isShuffled ? "text-[var(--color-primary)]" : "text-white/30 hover:text-white"}`} aria-label="Shuffle">
-                                            <Shuffle className="h-5 w-5" />
+                                            <Shuffle className="h-[clamp(18px,4vw,20px)] w-[clamp(18px,4vw,20px)]" />
                                         </button>
-                                        <div className="flex items-center gap-5">
-                                            <button type="button" onClick={prevTrack} className="p-1 text-white/60 transition hover:text-white" aria-label="Previous"><SkipBack className="h-6 w-6 fill-current" /></button>
-                                            <button type="button" onClick={togglePlay} disabled={isLoading} className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-black transition hover:scale-105 active:scale-95 disabled:opacity-60 shadow-lg" aria-label={isPlaying ? "Pause" : "Play"}>
-                                                {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : isPlaying ? <Pause className="h-6 w-6 fill-current" /> : <Play className="ml-0.5 h-6 w-6 fill-current" />}
+                                        <div className="flex items-center gap-fluid">
+                                            <button type="button" onClick={prevTrack} className="p-1 text-white/60 transition hover:text-white" aria-label="Previous"><SkipBack className="h-[clamp(20px,5vw,24px)] w-[clamp(20px,5vw,24px)] fill-current" /></button>
+                                            <button type="button" onClick={togglePlay} disabled={isLoading} className="flex h-[clamp(48px,12vw,56px)] w-[clamp(48px,12vw,56px)] items-center justify-center rounded-full bg-white text-black transition hover:scale-105 active:scale-95 disabled:opacity-60 shadow-lg" aria-label={isPlaying ? "Pause" : "Play"}>
+                                                {isLoading ? <Loader2 className="h-[clamp(20px,5vw,24px)] w-[clamp(20px,5vw,24px)] animate-spin" /> : isPlaying ? <Pause className="h-[clamp(20px,5vw,24px)] w-[clamp(20px,5vw,24px)] fill-current" /> : <Play className="ml-0.5 h-[clamp(20px,5vw,24px)] w-[clamp(20px,5vw,24px)] fill-current" />}
                                             </button>
-                                            <button type="button" onClick={nextTrack} className="p-1 text-white/60 transition hover:text-white" aria-label="Next"><SkipForward className="h-6 w-6 fill-current" /></button>
+                                            <button type="button" onClick={nextTrack} className="p-1 text-white/60 transition hover:text-white" aria-label="Next"><SkipForward className="h-[clamp(20px,5vw,24px)] w-[clamp(20px,5vw,24px)] fill-current" /></button>
                                         </div>
                                         <button type="button" onClick={cycleRepeat} className={`p-2 transition ${repeatMode !== "off" ? "text-[var(--color-primary)]" : "text-white/30 hover:text-white"}`} aria-label="Repeat">
-                                            {repeatMode === "one" ? <Repeat1 className="h-5 w-5" /> : <Repeat className="h-5 w-5" />}
+                                            {repeatMode === "one" ? <Repeat1 className="h-[clamp(18px,4vw,20px)] w-[clamp(18px,4vw,20px)]" /> : <Repeat className="h-[clamp(18px,4vw,20px)] w-[clamp(18px,4vw,20px)]" />}
                                         </button>
                                     </div>
 
                                     {/* Action row: like, lyrics, queue, volume */}
-                                    <div className="mt-5 flex w-full max-w-[340px] lg:max-w-[420px] mx-auto items-center justify-between">
+                                    <div className="mt-fluid flex w-full max-w-[clamp(260px,80vw,340px)] lg:max-w-[420px] mx-auto items-center justify-between pb-8 lg:pb-0">
                                         <div className="flex items-center gap-1">
                                             <button type="button" onClick={() => toggleLike(currentTrack)} className={`rounded-full p-2.5 transition ${liked ? "text-[var(--color-primary)]" : "text-white/35 hover:text-white"}`} aria-label="Like">
                                                 <ThumbsUp className={`h-[18px] w-[18px] ${liked ? "fill-current" : ""}`} />
                                             </button>
-                                            <button type="button" onClick={() => { setExpandedTab("lyrics"); }} className={`rounded-full p-2.5 transition ${expandedTab === "lyrics" ? "text-[var(--color-primary)]" : "text-white/35 hover:text-white"}`} aria-label="Lyrics">
+                                            <button type="button" onClick={() => { setExpandedTab("lyrics"); }} className={`rounded-full p-2.5 transition lg:hidden ${expandedTab === "lyrics" ? "text-[var(--color-primary)]" : "text-white/35 hover:text-white"}`} aria-label="Lyrics">
                                                 <Captions className="h-[18px] w-[18px]" />
                                             </button>
-                                            <button type="button" onClick={() => { setExpandedTab("queue"); }} className={`rounded-full p-2.5 transition ${expandedTab === "queue" ? "text-[var(--color-primary)]" : "text-white/35 hover:text-white"}`} aria-label="Queue">
+                                            <button type="button" onClick={() => { setExpandedTab("queue"); }} className={`rounded-full p-2.5 transition lg:hidden ${expandedTab === "queue" ? "text-[var(--color-primary)]" : "text-white/35 hover:text-white"}`} aria-label="Queue">
                                                 <ListMusic className="h-[18px] w-[18px]" />
                                             </button>
-                                            <TrackActionMenu track={currentTrack} showSleepTimer triggerClassName="rounded-full p-2.5 text-white/35 transition hover:text-white" iconClassName="h-[18px] w-[18px]" />
+                                            <TrackActionMenu track={currentTrack} showSleepTimer triggerClassName="rounded-full p-2.5 text-white/35 transition hover:text-white hidden lg:block" iconClassName="h-[18px] w-[18px]" />
                                         </div>
-                                        <div className="flex items-center gap-2 w-28">
+                                        <div className="hidden lg:flex items-center gap-2 w-28">
                                             <button type="button" onClick={toggleMute} className="text-white/35 transition hover:text-white p-1">
                                                 {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : volume < 0.5 ? <Volume1 className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                                             </button>
@@ -529,32 +665,17 @@ export default function YoutubePlayer() {
                                         )}
 
                                         {expandedTab === "queue" && (
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <p className="text-[10px] uppercase tracking-[0.25em] text-white/30">Queue</p>
-                                                        {queue.length > 0 && <button type="button" onClick={clearQueue} className="text-[10px] text-white/40 transition hover:text-white">Clear</button>}
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        {queue.map((track, index) => (
-                                                            <TrackItem key={`queue-${track.videoId}-${index}`} track={track} active={currentTrack.videoId === track.videoId} playing={isPlaying} onClick={() => playTrack(track)} actions={<div className="flex items-center gap-0.5"><button type="button" onClick={(event) => { event.stopPropagation(); moveToTop(index); }} className="rounded-full p-1.5 text-white/30 transition hover:bg-white/10 hover:text-white" aria-label="Move to top"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" onClick={(event) => { event.stopPropagation(); removeFromQueue(index); }} className="rounded-full p-1.5 text-white/30 transition hover:bg-white/10 hover:text-white" aria-label="Remove"><Trash2 className="h-3.5 w-3.5" /></button></div>} />
-                                                        ))}
-                                                        {queue.length === 0 && <p className="py-6 text-center text-xs text-white/25">No manual queue.</p>}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <p className="text-[10px] uppercase tracking-[0.25em] text-white/30">Up Next</p>
-                                                        {isLoadingUpNext && <Loader2 className="h-3 w-3 animate-spin text-[var(--color-primary)]" />}
-                                                    </div>
-                                                    <div className="space-y-1.5">
-                                                        {upNextTracks.map((track, index) => (
-                                                            <TrackItem key={`up-next-${track.videoId}-${index}`} track={track} active={currentTrack.videoId === track.videoId} playing={isPlaying} onClick={() => playTrack(track)} actions={<TrackActionMenu track={track} />} />
-                                                        ))}
-                                                        {!isLoadingUpNext && upNextTracks.length === 0 && <p className="py-6 text-center text-xs text-white/25">Recommendations load with context.</p>}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <QueuePanel
+                                                queue={queue}
+                                                upNextTracks={upNextTracks}
+                                                isLoadingUpNext={isLoadingUpNext}
+                                                currentTrack={currentTrack}
+                                                isPlaying={isPlaying}
+                                                playTrack={playTrack}
+                                                moveToTop={moveToTop}
+                                                removeFromQueue={removeFromQueue}
+                                                clearQueue={clearQueue}
+                                            />
                                         )}
                                     </div>
                                 </div>
@@ -572,33 +693,39 @@ export default function YoutubePlayer() {
                 className="fixed bottom-[72px] left-0 right-0 z-[55] border-t border-white/[0.06] bg-[#181818] select-none sm:bottom-0"
                 data-testid="player-bar"
             >
-                <div className="grid h-[72px] grid-cols-[1fr_2fr_1fr] items-center gap-2 px-3 sm:px-4 md:px-6">
+                {/* Thin Mobile Progress Bar at Top */}
+                <div 
+                    className="absolute top-0 left-0 right-0 h-[2px] sm:hidden bg-white/10 group-hover:h-1 transition-all cursor-pointer"
+                    onClick={(event) => seekFromClientX(event.clientX, event.currentTarget)}
+                >
+                    <div className="h-full bg-[var(--color-primary)]" style={{ width: `${progressPercent}%` }} />
+                </div>
+
+                <div className="flex sm:grid h-[clamp(56px,8vh,72px)] w-full items-center justify-between sm:grid-cols-[1fr_2fr_1fr] gap-2 px-3 sm:px-4 md:px-6">
                     {/* Left: Track Info */}
-                    <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-2 sm:gap-3 flex-1 sm:flex-none">
                         <button 
                             type="button" 
                             onClick={() => setIsExpanded(true)} 
-                            className="group relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-white/[0.04]"
+                            className="group relative h-10 w-10 sm:h-14 sm:w-14 flex-shrink-0 overflow-hidden rounded-md bg-white/[0.04]"
                         >
                             <Image 
                                 src={currentTrack.thumbnail} 
                                 alt={currentTrack.title} 
                                 fill 
                                 className="object-cover transition duration-300 group-hover:brightness-75" 
-                                sizes="56px" 
+                                sizes="(max-width: 640px) 40px, 56px" 
                             />
                         </button>
-                        <div className="min-w-0 flex-1">
-                            <button 
-                                type="button" 
-                                onClick={() => setIsExpanded(true)} 
-                                className="block max-w-full truncate text-left text-[14px] font-semibold text-white transition hover:underline"
+                        <div className="min-w-0 flex-1 flex flex-col justify-center cursor-pointer" onClick={() => setIsExpanded(true)}>
+                            <span 
+                                className="block max-w-full truncate text-left text-fluid-sm font-semibold text-white transition hover:underline"
                             >
                                 {currentTrack.title}
-                            </button>
-                            <p className="max-w-full truncate text-left text-[12px] text-white/50">
+                            </span>
+                            <span className="max-w-full truncate text-left text-fluid-xs text-white/50">
                                 {currentTrack.artist}
-                            </p>
+                            </span>
                         </div>
                         <button 
                             type="button" 
@@ -610,8 +737,8 @@ export default function YoutubePlayer() {
                         </button>
                     </div>
 
-                    {/* Center: Controls + Progress */}
-                    <div className="flex flex-col items-center justify-center gap-1">
+                    {/* Center: Controls + Progress (Hidden on mobile) */}
+                    <div className="hidden sm:flex flex-col items-center justify-center gap-1">
                         <div className="flex items-center gap-3 sm:gap-5">
                             <button 
                                 type="button" 
@@ -684,7 +811,24 @@ export default function YoutubePlayer() {
 
                     {/* Right: Utilities */}
                     <div className="flex items-center justify-end gap-1 md:gap-2">
-                        <div className="flex items-center rounded-full border border-white/[0.06] bg-white/[0.03] p-0.5">
+                        {/* Mobile Play Button */}
+                        <button 
+                            type="button" 
+                            onClick={(e) => { e.stopPropagation(); togglePlay(); }} 
+                            disabled={isLoading} 
+                            className="flex sm:hidden h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-white transition hover:scale-105 active:scale-95 disabled:opacity-60"
+                            aria-label={isPlaying ? "Pause" : "Play"}
+                        >
+                            {isLoading ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                            ) : isPlaying ? (
+                                <Pause className="h-5 w-5 fill-current" />
+                            ) : (
+                                <Play className="ml-0.5 h-5 w-5 fill-current" />
+                            )}
+                        </button>
+                    
+                        <div className="hidden sm:flex items-center rounded-full border border-white/[0.06] bg-white/[0.03] p-0.5">
                             <button 
                                 type="button" 
                                 onClick={() => openPanel("lyrics")} 
@@ -732,7 +876,7 @@ export default function YoutubePlayer() {
                         <button 
                             type="button" 
                             onClick={() => setIsExpanded(true)} 
-                            className="p-2 text-white/40 transition hover:text-white"
+                            className="hidden sm:block p-2 text-white/40 transition hover:text-white"
                         >
                             <ChevronUp className="h-4 w-4" />
                         </button>
@@ -742,3 +886,4 @@ export default function YoutubePlayer() {
         </>
     );
 }
+

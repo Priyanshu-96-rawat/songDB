@@ -156,6 +156,8 @@ export function SearchBar() {
             <Search className="h-4 w-4" />
           </span>
           <input
+            id="search-input"
+            name="search"
             ref={inputRef}
             type="search"
             value={query}

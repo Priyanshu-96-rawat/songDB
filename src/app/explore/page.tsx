@@ -26,8 +26,8 @@ export default async function ExplorePage() {
             <MusicShelf
               title={shelf.title}
               tracks={shelf.tracks}
-              layout={index === 0 ? "grid" : "scroll"}
-              maxItems={index === 0 ? 12 : 10}
+              layout="grid"
+              maxItems={18}
             />
           </div>
         ))}

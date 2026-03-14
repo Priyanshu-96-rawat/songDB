@@ -16,6 +16,16 @@ const SUPPRESSED_PATTERNS = [
   /Download the React DevTools/,
   /lockdown-install/,
   /SES Removing unpermitted intrinsics/,
+  /Blocked a frame with origin .* from accessing a cross-origin frame/,
+  /Failed to read a named property .* from 'Window'/,
+  /SecurityError.*cross-origin/,
+  /the server responded with a status of 429/,
+  /Failed to load resource.*429/,
+  /ResizeObserver loop/,
+  /Third-party cookie/i,
+  /was detected as the Largest Contentful Paint/,
+  /was preloaded using link preload/,
+  /does not match the recipient window's origin/,
 ];
 
 function shouldSuppress(message: string): boolean {

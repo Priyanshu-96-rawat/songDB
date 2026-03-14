@@ -44,7 +44,7 @@ export default function DownloadPage() {
                 margin: 2,
                 scale: 10,
                 color: {
-                    dark: "#06080d",
+                    dark: "#050508",
                     light: "#ffffff"
                 }
             })
@@ -92,13 +92,12 @@ export default function DownloadPage() {
             {/* Hero */}
             <div className="text-center mb-12">
                 {/* Logo */}
-                <div className="mx-auto w-20 h-20 rounded-[24px] bg-gradient-to-br from-[#ff6a3d] via-[#ff835c] to-[#ffd29f] flex items-center justify-center shadow-[0_0_60px_rgba(255,106,61,0.3)] mb-6">
-                    <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
-                        <rect x="4" y="16" width="4" height="8" rx="2" fill="white" />
-                        <rect x="11" y="10" width="4" height="20" rx="2" fill="white" />
-                        <rect x="18" y="6" width="4" height="28" rx="2" fill="white" />
-                        <rect x="25" y="12" width="4" height="16" rx="2" fill="white" />
-                        <rect x="32" y="14" width="4" height="12" rx="2" fill="white" />
+                <div className="mx-auto w-20 h-20 rounded-[24px] bg-gradient-to-br from-[#8B5CF6] via-[#3B82F6] to-[#06B6D4] flex items-center justify-center shadow-[0_0_60px_rgba(139,92,246,0.3)] mb-6">
+                    <svg width="34" height="34" viewBox="0 0 44 44" fill="none">
+                        <circle cx="22" cy="22" r="18" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" fill="none" />
+                        <circle cx="22" cy="22" r="13" stroke="rgba(255,255,255,0.12)" strokeWidth="1" fill="none" />
+                        <circle cx="22" cy="22" r="3" fill="white" opacity="0.9" />
+                        <path d="M26 14V28.5C26 30.433 24.433 32 22.5 32C20.567 32 19 30.433 19 28.5C19 26.567 20.567 25 22.5 25C23.163 25 23.785 25.167 24.331 25.462V14L30 12V17L26 14Z" fill="white" opacity="0.95" />
                     </svg>
                 </div>
 
@@ -115,11 +114,11 @@ export default function DownloadPage() {
 
                 {/* Install Card */}
                 <div className="glass rounded-2xl p-6 flex flex-col items-center text-center gap-5">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#ff6a3d]/20 to-[#ffd29f]/10 flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#8B5CF6]/20 to-[#3B82F6]/10 flex items-center justify-center">
                         {isMobile ? (
-                            <Smartphone className="w-6 h-6 text-[#ff6a3d]" />
+                            <Smartphone className="w-6 h-6 text-[#8B5CF6]" />
                         ) : (
-                            <Monitor className="w-6 h-6 text-[#ff6a3d]" />
+                            <Monitor className="w-6 h-6 text-[#8B5CF6]" />
                         )}
                     </div>
 
@@ -150,7 +149,7 @@ export default function DownloadPage() {
                     ) : installPrompt ? (
                         <button
                             onClick={handleInstall}
-                            className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#ff6a3d] to-[#ff835c] text-white text-sm font-bold shadow-[0_4px_20px_rgba(255,106,61,0.3)] hover:shadow-[0_4px_30px_rgba(255,106,61,0.5)] hover:scale-105 active:scale-95 transition-all"
+                            className="flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#3B82F6] text-white text-sm font-bold shadow-[0_4px_20px_rgba(139,92,246,0.3)] hover:shadow-[0_4px_30px_rgba(139,92,246,0.5)] hover:scale-105 active:scale-95 transition-all"
                         >
                             <Download className="w-4 h-4" />
                             Install Now
@@ -167,8 +166,8 @@ export default function DownloadPage() {
 
                 {/* QR Code Card */}
                 <div className="glass rounded-2xl p-6 flex flex-col items-center text-center gap-5">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#ffd29f]/20 to-[#ff6a3d]/10 flex items-center justify-center">
-                        <QrCode className="w-6 h-6 text-[#ffd29f]" />
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#3B82F6]/20 to-[#8B5CF6]/10 flex items-center justify-center">
+                        <QrCode className="w-6 h-6 text-[#3B82F6]" />
                     </div>
 
                     <div>

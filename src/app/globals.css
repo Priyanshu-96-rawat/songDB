@@ -56,6 +56,30 @@
     padding-inline: 1.5rem;
     max-width: 1400px;
   }
+
+  /* ── Fluid Typography ── */
+  .text-fluid-xs   { font-size: clamp(0.65rem, 0.55rem + 0.5vw, 0.75rem); }
+  .text-fluid-sm   { font-size: clamp(0.75rem, 0.65rem + 0.5vw, 0.875rem); }
+  .text-fluid-base { font-size: clamp(0.875rem, 0.75rem + 0.5vw, 1rem); }
+  .text-fluid-lg   { font-size: clamp(1.1rem, 0.95rem + 0.6vw, 1.25rem); }
+  .text-fluid-xl   { font-size: clamp(1.25rem, 1rem + 1vw, 1.5rem); }
+  .text-fluid-2xl  { font-size: clamp(1.5rem, 1.1rem + 1.5vw, 2rem); }
+  .text-fluid-3xl  { font-size: clamp(1.75rem, 1.2rem + 2vw, 3rem); }
+  .text-fluid-hero { font-size: clamp(2rem, 1.2rem + 3vw, 3.75rem); }
+
+  /* ── Fluid Spacing ── */
+  .gap-fluid  { gap: clamp(0.5rem, 0.3rem + 1vw, 1.5rem); }
+  .p-fluid    { padding: clamp(0.75rem, 0.4rem + 1.5vw, 2rem); }
+  .px-fluid   { padding-inline: clamp(0.75rem, 0.4rem + 1.5vw, 2rem); }
+  .py-fluid   { padding-block: clamp(0.5rem, 0.3rem + 1vw, 1.5rem); }
+
+  /* ── Responsive container ── */
+  .container-responsive {
+    width: 100%;
+    max-width: 1400px;
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 0.5rem + 2vw, 2rem);
+  }
 }
 
 body {
@@ -966,3 +990,53 @@ textarea:focus-visible {
   }
 }
 
+/* ═══════════════════════════════════════════
+   PWA — Standalone Mode & Safe Area Support
+   ═══════════════════════════════════════════ */
+
+/* Safe area utilities for notched devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Standalone mode adjustments (when installed as PWA) */
+@media (display-mode: standalone) {
+  body {
+    /* Ensure no overscroll bounce on iOS */
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: text;
+    /* Prevent pull-to-refresh */
+    overflow-y: auto;
+  }
+
+  /* Remove any browser-specific gap at the top */
+  html {
+    height: 100%;
+  }
+
+  /* Ensure footer/nav respect safe areas in standalone */
+  .safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
+  }
+}
+
+/* Prevent text selection on interactive elements in PWA */
+@media (display-mode: standalone) {
+  button,
+  a,
+  [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Smoother touch interactions */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

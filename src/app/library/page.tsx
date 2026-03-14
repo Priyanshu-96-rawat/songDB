@@ -59,11 +59,11 @@ export default function LibraryPage() {
     };
 
     return (
-        <div className="px-6 py-6">
+        <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8 max-w-7xl mx-auto">
             {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl md:text-4xl font-bold text-white mb-1">Your Library</h1>
-                <p className="text-white/40 text-sm">
+            <div className="mb-6 sm:mb-8">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">Your Library</h1>
+                <p className="text-white/40 text-xs sm:text-sm">
                     {activeTab === "playlists"
                         ? selectedPlaylist
                             ? `${selectedPlaylist.tracks.length} tracks in ${selectedPlaylist.name}`
@@ -73,7 +73,7 @@ export default function LibraryPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-2 sm:gap-3 mb-5 sm:mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
                 <button
                     onClick={() => setActiveTab("liked")}
                     className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${activeTab === "liked"
@@ -103,27 +103,27 @@ export default function LibraryPage() {
                         setActiveTab("playlists");
                         setSelectedPlaylistId(null);
                     }}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${activeTab === "playlists"
+                    className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-[13px] sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${activeTab === "playlists"
                             ? ""
                             : "bg-white/[0.06] text-white/60 hover:text-white hover:bg-white/[0.1]"
                         }`}
                     style={activeTab === "playlists" ? accentButtonStyle : undefined}
                 >
-                    <ListMusic className="h-4 w-4" />
+                    <ListMusic className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     Playlists
-                    <span className="text-xs opacity-70">({playlists.length})</span>
+                    <span className="text-[10px] sm:text-xs opacity-70">({playlists.length})</span>
                 </button>
             </div>
 
             {/* Action buttons */}
             {tracks.length > 0 && (
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-5 sm:mb-6 mt-4 sm:mt-0">
                     <button
                         onClick={playAll}
-                        className="flex items-center gap-2 px-6 py-2.5 rounded-full font-semibold text-sm transition-all hover:brightness-110"
+                        className="flex items-center justify-center gap-1.5 sm:gap-2 px-5 sm:px-6 py-2 sm:py-2.5 rounded-full font-semibold text-[13px] sm:text-sm transition-all hover:brightness-110 flex-1 sm:flex-none"
                         style={accentButtonStyle}
                     >
-                        <Play className="h-4 w-4 fill-black" />
+                        <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-black" />
                         Play All
                     </button>
                     <button
@@ -139,9 +139,9 @@ export default function LibraryPage() {
                                 deletePlaylist(selectedPlaylist.id);
                                 setSelectedPlaylistId(null);
                             }}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/[0.06] text-white/70 font-medium text-sm hover:bg-white/[0.1] hover:text-white transition-colors"
+                            className="flex items-center justify-center w-full sm:w-auto mt-1 sm:mt-0 gap-1.5 sm:gap-2 px-5 py-2 sm:py-2.5 rounded-full bg-white/[0.06] text-white/70 font-medium text-[13px] sm:text-sm hover:bg-white/[0.1] hover:text-white transition-colors"
                         >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             Delete Playlist
                         </button>
                     )}
@@ -156,20 +156,20 @@ export default function LibraryPage() {
                                 <p className="text-lg font-semibold text-white">Create a playlist</p>
                                 <p className="mt-1 text-sm text-white/45">Tracks added from the action menus land here instantly.</p>
                             </div>
-                            <div className="flex w-full max-w-xl gap-3">
+                            <div className="flex flex-col sm:flex-row w-full max-w-xl gap-2 sm:gap-3">
                                 <input
                                     value={newPlaylistName}
                                     onChange={(event) => setNewPlaylistName(event.target.value)}
                                     placeholder="Night drive, gym set, focus loop..."
-                                    className="h-12 flex-1 rounded-full border border-white/10 bg-white/[0.04] px-4 text-sm text-white placeholder:text-white/24 [outline:none]"
+                                    className="h-11 sm:h-12 flex-1 rounded-full border border-white/10 bg-white/[0.04] px-4 text-[13px] sm:text-sm text-white placeholder:text-white/24 [outline:none]"
                                 />
                                 <button
                                     onClick={createNewPlaylist}
                                     disabled={!newPlaylistName.trim()}
-                                    className="inline-flex h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="inline-flex h-11 sm:h-12 items-center justify-center gap-1.5 sm:gap-2 rounded-full px-5 text-[13px] sm:text-sm font-semibold transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                                     style={accentButtonStyle}
                                 >
-                                    <Plus className="h-4 w-4" />
+                                    <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     New Playlist
                                 </button>
                             </div>
@@ -177,7 +177,7 @@ export default function LibraryPage() {
                     </div>
 
                     {playlists.length > 0 ? (
-                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                             {playlists.map((playlist) => (
                                 <button
                                     key={playlist.id}
@@ -194,8 +194,8 @@ export default function LibraryPage() {
                                             Local
                                         </span>
                                     </div>
-                                    <div className="mt-6 flex items-center gap-2">
-                                        <span className="inline-flex h-11 w-11 items-center justify-center rounded-full text-black" style={accentButtonStyle}>
+                                    <div className="mt-5 sm:mt-6 flex items-center gap-2">
+                                        <span className="inline-flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full text-black" style={accentButtonStyle}>
                                             <Play className="ml-0.5 h-4 w-4 fill-current" />
                                         </span>
                                         <span className="text-sm text-white/45">Open playlist</span>
@@ -259,3 +259,10 @@ export default function LibraryPage() {
         </div>
     );
 }
+
+
+
+
+
+
+
