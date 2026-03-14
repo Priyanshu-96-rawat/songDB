@@ -14,6 +14,7 @@ export function SearchBar() {
   const [query, setQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<YouTubeTrack[]>([]);
+  const [querySuggestions, setQuerySuggestions] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -41,32 +42,41 @@ export function SearchBar() {
   useEffect(() => {
     if (!debouncedQuery.trim() || debouncedQuery.length < 2) {
       setSuggestions([]);
+      setQuerySuggestions([]);
       return;
     }
 
     const controller = new AbortController();
 
-    async function fetchSuggestions() {
+    async function fetchData() {
       setIsSearching(true);
       try {
-        const res = await fetch(
-          `/api/youtube-search?q=${encodeURIComponent(debouncedQuery)}&type=songs`,
-          { signal: controller.signal }
-        );
-        const data = await res.json();
-        if (data.success && data.data?.tracks) {
-          setSuggestions(data.data.tracks.slice(0, 8));
+        const [searchRes, suggestionsRes] = await Promise.allSettled([
+          fetch(`/api/youtube-search?q=${encodeURIComponent(debouncedQuery)}&type=songs`, { signal: controller.signal }),
+          fetch(`/api/youtube-music/suggestions?q=${encodeURIComponent(debouncedQuery)}`, { signal: controller.signal })
+        ]);
+
+        if (searchRes.status === "fulfilled") {
+          const data = await searchRes.value.json();
+          if (data.success && data.data?.tracks) {
+            setSuggestions(data.data.tracks.slice(0, 6));
+          }
+        }
+
+        if (suggestionsRes.status === "fulfilled") {
+          const data = await suggestionsRes.value.json();
+          if (data.success && Array.isArray(data.data)) {
+            setQuerySuggestions(data.data.slice(0, 5));
+          }
         }
       } catch (error: unknown) {
-        if (error instanceof Error && error.name !== "AbortError") {
-          console.error("[SearchBar] Suggestion fetch error:", error);
-        }
+        // Silently handle error to maintain clean console
       } finally {
         setIsSearching(false);
       }
     }
 
-    fetchSuggestions();
+    fetchData();
     return () => controller.abort();
   }, [debouncedQuery]);
 
@@ -108,15 +118,29 @@ export function SearchBar() {
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       setSelectedIndex((prev) => Math.max(prev - 1, -1));
-    } else if (event.key === "Enter" && selectedIndex >= 0 && suggestions[selectedIndex]) {
+    } else if (event.key === "Enter") {
       event.preventDefault();
-      handlePlaySuggestion(suggestions[selectedIndex]);
+      const queryCount = querySuggestions.length;
+      if (selectedIndex >= 0 && selectedIndex < queryCount) {
+        // String suggestion selected
+        const term = querySuggestions[selectedIndex];
+        setQuery(term);
+        saveRecentSearch(term);
+        router.push(`/search?q=${encodeURIComponent(term)}`);
+        setIsFocused(false);
+      } else if (selectedIndex >= queryCount && suggestions[selectedIndex - queryCount]) {
+        // Track suggestion selected
+        handlePlaySuggestion(suggestions[selectedIndex - queryCount]);
+      } else {
+        // Default submit
+        handleSubmit(event as any);
+      }
     } else if (event.key === "Escape") {
       setIsFocused(false);
     }
   };
 
-  const showDropdown = isFocused && (suggestions.length > 0 || isSearching || (!query && recentSearches.length > 0));
+  const showDropdown = isFocused && (suggestions.length > 0 || querySuggestions.length > 0 || isSearching || (!query && recentSearches.length > 0));
 
   return (
     <div className="relative z-50 w-full" ref={searchRef}>
@@ -199,7 +223,39 @@ export function SearchBar() {
               </div>
             )}
 
-            {isSearching && suggestions.length === 0 && (
+            {querySuggestions.length > 0 && (
+              <div className="p-2.5">
+                <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/28">
+                  Suggestions
+                </p>
+                {querySuggestions.map((term, index) => (
+                  <button
+                    key={`suggest-${index}`}
+                    onClick={() => {
+                      setQuery(term);
+                      saveRecentSearch(term);
+                      router.push(`/search?q=${encodeURIComponent(term)}`);
+                      setIsFocused(false);
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-[18px] px-3 py-2.5 text-left transition ${
+                      selectedIndex === index ? "bg-white/[0.08]" : "hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <Search className="h-4 w-4 shrink-0 text-white/28" />
+                    <span className="truncate text-sm text-white/78 font-medium">
+                      {term.toLowerCase().startsWith(query.toLowerCase()) ? (
+                        <>
+                          <span className="text-white/40">{term.slice(0, query.length)}</span>
+                          {term.slice(query.length)}
+                        </>
+                      ) : term}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {isSearching && suggestions.length === 0 && querySuggestions.length === 0 && (
               <div className="flex items-center justify-center gap-3 p-6">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 <span className="text-sm text-white/55">Searching…</span>
@@ -207,55 +263,61 @@ export function SearchBar() {
             )}
 
             {suggestions.length > 0 && (
-              <div className="max-h-[420px] overflow-y-auto p-2">
-                {suggestions.map((track, index) => (
-                  <motion.div
-                    key={`${track.videoId}-${index}`}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.024, duration: 0.18 }}
-                    onClick={() => handlePlaySuggestion(track)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        handlePlaySuggestion(track);
-                      }
-                    }}
-                    className={`group flex w-full items-center gap-3 rounded-[20px] p-3 text-left transition ${
-                      selectedIndex === index ? "bg-white/[0.08]" : "hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-2xl bg-white/[0.04]">
-                      <Image
-                        src={track.thumbnail}
-                        alt={track.title}
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100">
-                        <Play className="h-4 w-4 fill-white text-white" />
-                      </div>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">{track.title}</p>
-                      <p className="truncate text-xs text-white/42">{track.artist}</p>
-                    </div>
-                    <span className="text-[11px] font-medium tabular-nums text-white/28">{track.duration}</span>
-                    <div
-                      className="opacity-0 transition group-hover:opacity-100"
-                      onClick={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => event.stopPropagation()}
+              <div className="max-h-[420px] overflow-y-auto p-2 border-t border-white/5">
+                <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/28">
+                  Direct Matches
+                </p>
+                {suggestions.map((track, trackIndex) => {
+                  const index = querySuggestions.length + trackIndex;
+                  return (
+                    <motion.div
+                      key={`${track.videoId}-${index}`}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: trackIndex * 0.024, duration: 0.18 }}
+                      onClick={() => handlePlaySuggestion(track)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handlePlaySuggestion(track);
+                        }
+                      }}
+                      className={`group flex w-full items-center gap-3 rounded-[20px] p-3 text-left transition ${
+                        selectedIndex === index ? "bg-white/[0.08]" : "hover:bg-white/[0.05]"
+                      }`}
                     >
-                      <TrackActionMenu
-                        track={track}
-                        triggerClassName="rounded-full p-2 text-white/64 transition hover:bg-white/10 hover:text-white"
-                      />
-                    </div>
-                  </motion.div>
-                ))}
+                      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-2xl bg-white/[0.04]">
+                        <Image
+                          src={track.thumbnail}
+                          alt={track.title}
+                          fill
+                          className="object-cover"
+                          sizes="48px"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition group-hover:opacity-100">
+                          <Play className="h-4 w-4 fill-white text-white" />
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-white">{track.title}</p>
+                        <p className="truncate text-xs text-white/42">{track.artist}</p>
+                      </div>
+                      <span className="text-[11px] font-medium tabular-nums text-white/28">{track.duration}</span>
+                      <div
+                        className="opacity-0 transition group-hover:opacity-100"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        <TrackActionMenu
+                          track={track}
+                          triggerClassName="rounded-full p-2 text-white/64 transition hover:bg-white/10 hover:text-white"
+                        />
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </motion.div>

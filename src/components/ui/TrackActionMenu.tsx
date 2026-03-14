@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useLibraryStore } from "@/store/library";
 import { useYouTubePlayerStore, type YouTubeTrack } from "@/store/youtubePlayer";
+import { createPortal } from "react-dom";
 
 type MenuView = "menu" | "playlist" | "sleep";
 
@@ -53,6 +54,10 @@ export function TrackActionMenu({
     const [open, setOpen] = useState(false);
     const [view, setView] = useState<MenuView>("menu");
     const [newPlaylistName, setNewPlaylistName] = useState("");
+    const [coords, setCoords] = useState({ top: 0, left: 0, right: 0, bottom: 0, side: "bottom", align: "right" });
+    const [mounted, setMounted] = useState(false);
+    
+    useEffect(() => setMounted(true), []);
 
     const {
         addToQueue,
@@ -86,22 +91,30 @@ export function TrackActionMenu({
         }
 
         const handleOutsideClick = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setOpen(false);
-            }
+            const target = event.target as Node;
+            if (menuRef.current && menuRef.current.contains(target)) return;
+            const portalNode = document.getElementById("track-action-menu-portal");
+            if (portalNode && portalNode.contains(target)) return;
+            setOpen(false);
         };
 
         const handleEscape = (event: KeyboardEvent) => {
-            if (event.key === "Escape") {
-                setOpen(false);
-            }
+            if (event.key === "Escape") setOpen(false);
+        };
+        
+        const handleScroll = () => {
+             // Close on scroll to prevent detached menus
+             setOpen(false);
         };
 
         document.addEventListener("mousedown", handleOutsideClick);
         document.addEventListener("keydown", handleEscape);
+        window.addEventListener("scroll", handleScroll, true); // true to capture all scroll events in any scrollable container
+        
         return () => {
             document.removeEventListener("mousedown", handleOutsideClick);
             document.removeEventListener("keydown", handleEscape);
+            window.removeEventListener("scroll", handleScroll, true);
         };
     }, [open]);
 
@@ -130,7 +143,7 @@ export function TrackActionMenu({
         setOpen(false);
     };
 
-    const menuButtonClassName = "flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm text-white/78 transition hover:bg-white/[0.06] hover:text-white";
+    const menuButtonClassName = "group flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-sm font-medium text-white/70 transition-all hover:bg-white/10 hover:text-white active:scale-[0.98]";
 
     return (
         <div className="relative" ref={menuRef}>
@@ -138,6 +151,27 @@ export function TrackActionMenu({
                 type="button"
                 onClick={(event) => {
                     event.stopPropagation();
+                    if (!open && menuRef.current) {
+                        const rect = menuRef.current.getBoundingClientRect();
+                        const windowHeight = window.innerHeight;
+                        const windowWidth = window.innerWidth;
+                        
+                        // Decide placement based on space available
+                        const isBottomSpace = windowHeight - rect.bottom > 300;
+                        const calcSide = isBottomSpace ? "bottom" : "top";
+                        
+                        const isRightSpace = windowWidth - rect.left > 288; // 18rem
+                        const calcAlign = align === "left" || !isRightSpace ? "right" : "left";
+
+                        setCoords({
+                            side: calcSide,
+                            align: calcAlign,
+                            top: calcSide === "bottom" ? rect.bottom + 8 : 0,
+                            bottom: calcSide === "top" ? windowHeight - rect.top + 8 : 0,
+                            left: calcAlign === "left" ? rect.left : 0,
+                            right: calcAlign === "right" ? windowWidth - rect.right : 0,
+                        });
+                    }
                     setOpen((value) => !value);
                 }}
                 className={triggerClassName}
@@ -148,15 +182,20 @@ export function TrackActionMenu({
                 <MoreHorizontal className={iconClassName} />
             </button>
 
-            {open && (
+            {open && mounted && createPortal(
                 <div
+                    id="track-action-menu-portal"
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
-                    className={`absolute z-[80] w-[18rem] rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,18,25,0.98),rgba(9,11,16,0.98))] p-2 shadow-[0_28px_80px_rgba(0,0,0,0.48)] backdrop-blur-2xl ${
-                        align === "left" ? "left-0" : "right-0"
-                    } ${
-                        side === "top" ? "bottom-full mb-2 origin-bottom" : "top-full mt-2 origin-top"
+                    className={`fixed z-[99999] w-[18rem] rounded-[24px] border border-white/10 bg-[#050508]/95 backdrop-blur-3xl p-2 shadow-[0_28px_80px_rgba(0,0,0,0.8)] filter drop-shadow-2xl ${
+                        coords.side === "top" ? "origin-bottom" : "origin-top"
                     }`}
+                    style={{
+                        top: coords.side === "bottom" ? coords.top : undefined,
+                        bottom: coords.side === "top" ? coords.bottom : undefined,
+                        left: coords.align === "left" ? coords.left : undefined,
+                        right: coords.align === "right" ? coords.right : undefined,
+                    }}
                 >
                     {view === "menu" && (
                         <div className="space-y-1">
@@ -169,7 +208,7 @@ export function TrackActionMenu({
                                 }}
                                 className={menuButtonClassName}
                             >
-                                <StepForward className="h-4 w-4 text-white/42" />
+                                <StepForward className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                 Play next
                             </button>
                             <button
@@ -181,7 +220,7 @@ export function TrackActionMenu({
                                 }}
                                 className={menuButtonClassName}
                             >
-                                <ListMusic className="h-4 w-4 text-white/42" />
+                                <ListMusic className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                 Add to queue
                             </button>
                             <button
@@ -192,7 +231,7 @@ export function TrackActionMenu({
                                 }}
                                 className={menuButtonClassName}
                             >
-                                <Plus className="h-4 w-4 text-white/42" />
+                                <Plus className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                 Add to playlist
                             </button>
                             <button
@@ -204,7 +243,7 @@ export function TrackActionMenu({
                                 }}
                                 className={menuButtonClassName}
                             >
-                                <Radio className="h-4 w-4 text-white/42" />
+                                <Radio className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                 Start mix
                             </button>
                             <button
@@ -227,7 +266,7 @@ export function TrackActionMenu({
                                 }}
                                 className={menuButtonClassName}
                             >
-                                <Share2 className="h-4 w-4 text-white/42" />
+                                <Share2 className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                 Share
                             </button>
                             {showSleepTimer && (
@@ -239,7 +278,7 @@ export function TrackActionMenu({
                                     }}
                                     className={menuButtonClassName}
                                 >
-                                    <Clock3 className="h-4 w-4 text-white/42" />
+                                    <Clock3 className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                     <span className="flex-1">Sleep timer</span>
                                     {sleepTimerLabel && <span className="text-[11px] text-[var(--color-primary)]">{sleepTimerLabel}</span>}
                                 </button>
@@ -318,7 +357,7 @@ export function TrackActionMenu({
                                         }}
                                         className={menuButtonClassName}
                                     >
-                                        <Clock3 className="h-4 w-4 text-white/42" />
+                                        <Clock3 className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                         {option.label}
                                     </button>
                                 ))}
@@ -331,7 +370,7 @@ export function TrackActionMenu({
                                     }}
                                     className={menuButtonClassName}
                                 >
-                                    <Clock3 className="h-4 w-4 text-white/42" />
+                                    <Clock3 className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                     Stop at end of track
                                 </button>
                                 <button
@@ -343,13 +382,14 @@ export function TrackActionMenu({
                                     }}
                                     className={menuButtonClassName}
                                 >
-                                    <Clock3 className="h-4 w-4 text-white/42" />
+                                    <Clock3 className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                     Turn off timer
                                 </button>
                             </div>
                         </div>
                     )}
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

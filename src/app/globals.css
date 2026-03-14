@@ -1,26 +1,35 @@
 @import "tailwindcss";
 
 @theme {
-  /* ── Apple-Inspired Premium Palette ── */
-  --color-background: #000000;
-  --color-foreground: #ffffff;
+  /* ── Multi-Color Vibrant Palette ── */
+  --color-background: #050508;
+  --color-foreground: #f0f0f5;
 
-  --color-primary: #00FFFF;
-  --color-primary-foreground: #000000;
+  --color-primary: #8B5CF6;
+  --color-primary-rgb: 139, 92, 246;
+  --color-primary-foreground: #ffffff;
 
-  --color-secondary: #1C1C1E;
+  --color-secondary: #121218;
   --color-secondary-foreground: #ffffff;
 
-  --color-card: #1C1C1E;
+  --color-card: #141419;
   --color-card-foreground: #ffffff;
 
-  --color-muted: #2C2C2E;
-  --color-muted-foreground: #8E8E93;
+  --color-muted: #1e1e28;
+  --color-muted-foreground: #8E8E9A;
 
-  --color-accent: #0A84FF;
+  --color-accent: #3B82F6;
   --color-accent-foreground: #ffffff;
 
-  --color-player-accent: #00FFFF;
+  --color-player-accent: #8B5CF6;
+
+  /* Multi-color gradient stops */
+  --color-grad-purple: #8B5CF6;
+  --color-grad-blue: #3B82F6;
+  --color-grad-cyan: #06B6D4;
+  --color-grad-pink: #EC4899;
+  --color-grad-amber: #F59E0B;
+  --color-grad-green: #10B981;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -52,9 +61,10 @@
 body {
   position: relative;
   background:
-    radial-gradient(circle at top left, rgba(255, 123, 72, 0.18), transparent 30%),
-    radial-gradient(circle at top right, rgba(255, 210, 159, 0.14), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 18%),
+    radial-gradient(circle at top left, rgba(139, 92, 246, 0.12), transparent 30%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(236, 72, 153, 0.06), transparent 25%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%),
     var(--color-background);
   color: var(--color-foreground);
   overflow-x: hidden;
@@ -82,9 +92,9 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 15% 15%, rgba(255, 117, 71, 0.2), transparent 22%),
-    radial-gradient(circle at 80% 10%, rgba(255, 210, 159, 0.12), transparent 20%),
-    radial-gradient(circle at 50% 100%, rgba(110, 138, 176, 0.12), transparent 28%);
+    radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.14), transparent 22%),
+    radial-gradient(circle at 80% 10%, rgba(59, 130, 246, 0.10), transparent 20%),
+    radial-gradient(circle at 50% 100%, rgba(236, 72, 153, 0.08), transparent 28%);
   z-index: -2;
 }
 
@@ -124,17 +134,13 @@ button {
 
 /* ── Premium Surfaces ── */
 .shell-panel {
-  background: rgba(28, 28, 30, 0.75);
-  backdrop-filter: blur(40px) saturate(2);
-  -webkit-backdrop-filter: blur(40px) saturate(2);
+  background: rgba(28, 28, 30, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 .shell-panel-soft {
-  background: rgba(44, 44, 46, 0.4);
-  backdrop-filter: blur(24px) saturate(1.8);
-  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  background: rgba(44, 44, 46, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -154,7 +160,7 @@ button {
 }
 
 .section-kicker {
-  color: rgba(255, 210, 159, 0.85);
+  color: rgba(196, 181, 253, 0.85);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.24em;
@@ -167,7 +173,7 @@ button {
   width: 18rem;
   height: 18rem;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(255, 116, 64, 0.26), transparent 70%);
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.22), transparent 70%);
   filter: blur(24px);
   pointer-events: none;
 }
@@ -182,6 +188,16 @@ button {
   scrollbar-width: none;
 }
 
+/* ── Hide scrollbar completely ── */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* ── Smooth image loading ── */
 img {
   transition: opacity 0.4s ease;
@@ -189,8 +205,8 @@ img {
 
 /* ── Selection ── */
 ::selection {
-  background-color: rgba(255, 122, 77, 0.32);
-  color: #fff7ef;
+  background-color: rgba(139, 92, 246, 0.32);
+  color: #f3f0ff;
 }
 
 /* ── Focus ring ── */
@@ -289,11 +305,11 @@ textarea:focus-visible {
 
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(255, 0, 0, 0.12);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.12);
   }
 
   50% {
-    box-shadow: 0 0 40px rgba(255, 0, 0, 0.2), 0 0 60px rgba(255, 78, 69, 0.08);
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.2), 0 0 60px rgba(59, 130, 246, 0.08);
   }
 }
 
@@ -380,30 +396,23 @@ textarea:focus-visible {
   transform: perspective(600px) rotateX(-2deg) rotateY(2deg) translateY(-8px) scale(1.02);
   box-shadow:
     0 20px 40px rgba(0, 0, 0, 0.4),
-    0 0 30px rgba(255, 0, 0, 0.06),
+    0 0 30px rgba(139, 92, 246, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* ── Glassmorphism — premium frosted surfaces ── */
-/* ── Glassmorphism — Apple Frosted ── */
+/* ── Solid dark surfaces (blur removed for performance) ── */
 .glass {
-  background: rgba(28, 28, 30, 0.65);
-  backdrop-filter: blur(40px) saturate(2);
-  -webkit-backdrop-filter: blur(40px) saturate(2);
+  background: rgba(28, 28, 30, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-strong {
-  background: rgba(28, 28, 30, 0.85);
-  backdrop-filter: blur(50px) saturate(1.8);
-  -webkit-backdrop-filter: blur(50px) saturate(1.8);
+  background: rgba(28, 28, 30, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .glass-player {
-  background: rgba(28, 28, 30, 0.75);
-  backdrop-filter: blur(60px) saturate(2);
-  -webkit-backdrop-filter: blur(60px) saturate(2);
+  background: rgba(28, 28, 30, 0.95);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
 }
@@ -461,11 +470,11 @@ textarea:focus-visible {
 
   0%,
   100% {
-    border-color: rgba(255, 0, 0, 0.3);
+    border-color: rgba(139, 92, 246, 0.3);
   }
 
   50% {
-    border-color: rgba(255, 78, 69, 0.4);
+    border-color: rgba(59, 130, 246, 0.4);
   }
 }
 
@@ -475,14 +484,14 @@ textarea:focus-visible {
 
 /* ── Gradient text ── */
 .gradient-text {
-  background: linear-gradient(135deg, #FF0000, #FF6B6B, #FF4E45);
+  background: linear-gradient(135deg, #8B5CF6, #3B82F6, #06B6D4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gradient-text-spotify {
-  background: linear-gradient(135deg, #1DB954, #1ED760);
+  background: linear-gradient(135deg, #10B981, #06B6D4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -593,7 +602,7 @@ textarea:focus-visible {
 
 .card-hover:hover {
   transform: translateY(-4px) scale(1.015);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 24px rgba(255, 0, 0, 0.06);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 24px rgba(139, 92, 246, 0.06);
 }
 
 /* ── Row hover ── */
@@ -857,52 +866,10 @@ textarea:focus-visible {
 }
 
 /* ═══════════════════════════════════════════════════════
-   Splash Screen — Premium Logo Animations
+   Splash Screen v2 — Lightweight Premium
    ═══════════════════════════════════════════════════════ */
 
-/* Ambient glow orbs */
-.splash-glow-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(20px);
-  opacity: 0.25;
-  will-change: transform;
-}
-
-.splash-glow-orb-1 {
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, #00FFFF 0%, transparent 70%);
-  top: 30%;
-  left: 35%;
-  animation-delay: 0s;
-}
-
-.splash-glow-orb-2 {
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, #33cccc 0%, transparent 70%);
-  top: 50%;
-  right: 30%;
-  animation-delay: 2s;
-}
-
-.splash-glow-orb-3 {
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, #00cccc 0%, transparent 70%);
-  bottom: 25%;
-  left: 40%;
-  animation-delay: 4s;
-}
-
-@keyframes splash-float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(15px, -20px) scale(1.05); }
-  66% { transform: translate(-10px, 10px) scale(0.95); }
-}
-
-/* Pulsing rings around logo */
+/* Pulse rings around logo */
 .splash-logo-container {
   position: relative;
   display: flex;
@@ -910,37 +877,37 @@ textarea:focus-visible {
   justify-content: center;
 }
 
-.splash-ring {
+.splash-ring-v2 {
   position: absolute;
-  inset: -12px;
-  border-radius: 32px;
-  border: 1.5px solid rgba(0, 255, 255, 0.25);
-  animation: splash-ring-pulse 2s ease-out infinite;
+  inset: -14px;
+  border-radius: 36px;
+  border: 1.5px solid rgba(124, 58, 237, 0.3);
+  animation: splash-ring-v2-pulse 2.5s ease-out infinite;
 }
 
-.splash-ring-delay {
-  animation-delay: 1s;
+.splash-ring-v2-delay {
+  animation-delay: 1.2s;
 }
 
-@keyframes splash-ring-pulse {
+@keyframes splash-ring-v2-pulse {
   0% {
     transform: scale(1);
     opacity: 0.5;
   }
   100% {
-    transform: scale(1.5);
+    transform: scale(1.6);
     opacity: 0;
   }
 }
 
 /* Logo entry animation */
 .splash-logo-icon {
-  animation: splash-logo-enter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: splash-logo-enter 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 @keyframes splash-logo-enter {
   0% {
-    transform: scale(0.5) rotate(-10deg);
+    transform: scale(0.6) rotate(-8deg);
     opacity: 0;
   }
   100% {
@@ -949,72 +916,53 @@ textarea:focus-visible {
   }
 }
 
-/* Waveform bars in logo */
-.splash-bar {
-  animation: splash-waveform 1s ease-in-out infinite alternate;
-  transform-origin: center center;
-}
-
-@keyframes splash-waveform {
-  0% { transform: scaleY(0.4); }
-  100% { transform: scaleY(1); }
-}
-
-/* Shimmer wordmark */
-.splash-wordmark {
+/* Gradient wordmark */
+.splash-wordmark-v2 {
   background: linear-gradient(
-    90deg,
+    135deg,
     #ffffff 0%,
-    #00FFFF 25%,
-    #66ffff 50%,
-    #00cccc 75%,
+    #c4b5fd 30%,
+    #818cf8 50%,
+    #60a5fa 70%,
     #ffffff 100%
   );
-  background-size: 200% 100%;
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: splash-shimmer 2.5s ease-in-out infinite, splash-wordmark-enter 0.6s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: splash-gradient-shift 3s ease-in-out infinite, splash-wordmark-enter 0.5s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes splash-shimmer {
-  0% { background-position: 150% 0; }
-  100% { background-position: -50% 0; }
+@keyframes splash-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 @keyframes splash-wordmark-enter {
   0% {
     opacity: 0;
-    transform: translateY(12px);
-    filter: blur(4px);
+    transform: translateY(10px);
   }
   100% {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 
-/* Wave loading bars */
-.splash-wave-bar {
-  animation: splash-wave-bounce 0.8s ease-in-out infinite alternate;
+/* Loading dots */
+.splash-dot {
+  animation: splash-dot-pulse 1.2s ease-in-out infinite;
 }
 
-@keyframes splash-wave-bounce {
-  0% { height: 4px; }
-  100% { height: 20px; }
+@keyframes splash-dot-pulse {
+  0%, 80%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
-/* Loading ellipsis */
-.loading-ellipsis::after {
-  content: '';
-  animation: loading-dots 1.5s steps(4, end) infinite;
-}
-
-@keyframes loading-dots {
-  0% { content: ''; }
-  25% { content: '.'; }
-  50% { content: '..'; }
-  75% { content: '...'; }
-  100% { content: ''; }
-}

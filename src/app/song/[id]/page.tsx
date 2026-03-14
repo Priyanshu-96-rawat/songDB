@@ -109,7 +109,7 @@ export default async function SongPage({ params }: { params: Promise<{ id: strin
                             </a>
                             <Link
                                 href={`/artist/${encodeURIComponent(songArtist)}`}
-                                className="flex items-center gap-2 bg-white/8 text-white/80 hover:bg-white/15 px-6 py-3 rounded-full font-medium text-sm transition-all backdrop-blur-md border border-white/8 hover:border-white/15"
+                                className="flex items-center gap-2 bg-white/8 text-white/80 hover:bg-white/15 px-6 py-3 rounded-full font-medium text-sm transition-all border border-white/8 hover:border-white/15"
                             >
                                 View Artist
                             </Link>

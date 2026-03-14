@@ -30,7 +30,7 @@ export function HeroPlayButton({ title, artist }: HeroPlayButtonProps) {
                 playTrack(data.data[0]);
             }
         } catch (err) {
-            console.error("[HeroPlayButton] Error:", err);
+            // Silenced for production
         } finally {
             setIsLoading(false);
         }

@@ -11,7 +11,6 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
     const { signInWithGoogle, error: authError, user, loading: authLoading } = useAuth();
-    console.log("LoginPage Render State:", { hasUser: !!user, authLoading, authError });
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -22,9 +21,7 @@ export default function LoginPage() {
 
     // Redirect if already logged in (must be in effect, not during render)
     useEffect(() => {
-        console.log("LoginPage Auth State Changed. User:", user ? user.email : "None");
         if (user) {
-            console.log("LoginPage: User detected, redirecting to /");
             router.push('/');
         }
     }, [user, router]);
@@ -35,11 +32,10 @@ export default function LoginPage() {
         setLocalError("");
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            console.log("LoginPage: Email login successful");
             router.push("/");
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Failed to log in";
-            console.error("LoginPage: Email login error:", msg);
+            // Catch error for local state display
             setLocalError(msg);
         } finally {
             setIsSubmitting(false);
@@ -47,11 +43,10 @@ export default function LoginPage() {
     };
 
     const handleGoogleLogin = async () => {
-        console.log("LoginPage: 'Continue with Google' button clicked");
         try {
             await signInWithGoogle();
         } catch (err: any) {
-            console.error("LoginPage: Google login button error:", err);
+            // Catch error for AuthContext to handle
         }
     };
 
@@ -66,13 +61,13 @@ export default function LoginPage() {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md bg-white/5 border border-white/10 backdrop-blur-2xl p-8 rounded-3xl relative z-10 shadow-2xl"
+                className="w-full max-w-md bg-white/5 border border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
             >
                 <div className="text-center mb-10">
                     <motion.div
                         initial={{ scale: 0.8 }}
                         animate={{ scale: 1 }}
-                        className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(0,255,255,0.3)]"
+                        className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(139,92,246,0.3)]"
                     >
                         <LogIn className="text-primary-foreground w-8 h-8" />
                     </motion.div>
@@ -120,7 +115,7 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={isSubmitting || authLoading}
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] disabled:opacity-50 mt-4 active:scale-95"
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:shadow-[0_0_30px_rgba(139,92,246,0.4)] disabled:opacity-50 mt-4 active:scale-95"
                     >
                         {isSubmitting || authLoading ? "Authenticating..." : "CONTINUE"}
                     </button>

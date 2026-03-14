@@ -79,12 +79,10 @@ All API responses map to the following schema:
 - **Output Data**: `{ info: TrackMetadata }`
 - **Description**: Uses `youtubei.js` to get full metadata for a given video ID to supplement search context.
 
-### 9. Music Audio Stream Proxy `GET /api/youtube-stream`
-- **Method**: GET
-- **Auth Level**: Public / Rate Limited (High Bandwidth)
-- **Input Query**: `?id=VIDEO_ID`
-- **Output Data**: Binary Audio Stream / ArrayBuffer
-- **Description**: Resolves the highest-quality playable audio stream via direct extraction scoring, proxies the stream chunks to the frontend `HTMLAudioElement`, and exposes chosen codec/container/bitrate in response headers for debugging. Supports partial 206 responses.
+### 9. Music Audio Playback (Deprecated/Internal)
+- **Method**: N/A (Client-side IFrame)
+- **Auth Level**: Public
+- **Description**: Playback is now handled entirely client-side using the hidden YouTube IFrame Player API for stability. The legacy `/api/youtube-stream` endpoint has been removed to avoid reliability issues with direct stream extraction.
 
 ### 10. Synced Lyrics `GET /api/youtube-music/lyrics`
 - **Method**: GET

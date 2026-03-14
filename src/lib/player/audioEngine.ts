@@ -49,7 +49,6 @@ class AudioEngine {
 
         window.onYouTubeIframeAPIReady = () => {
             this.isApiLoaded = true
-            console.log("[AudioEngine] YouTube IFrame API Ready")
 
             if (this.currentVideoId) {
                 this.initPlayer(this.currentVideoId)
@@ -84,7 +83,6 @@ class AudioEngine {
             },
             events: {
                 onReady: () => {
-                    console.log("[AudioEngine] Player Ready")
                     this.isPlayerReady = true
 
                     useYouTubePlayerStore.setState({ isLoading: false })
@@ -128,7 +126,6 @@ class AudioEngine {
                 },
 
                 onError: (event: { data: number }) => {
-                    console.error("[AudioEngine] Player Error:", event.data)
 
                     useYouTubePlayerStore.setState({
                         isPlaying: false,
@@ -188,7 +185,7 @@ class AudioEngine {
             try {
                 this.player.loadVideoById(videoId)
             } catch {
-                console.warn("[AudioEngine] loadVideoById called too early")
+                // Silently handle load errors or state conflicts
             }
         }
 

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error('[youtube-music/home] API error:', error);
+        // Silenced for production
         return NextResponse.json(
             {
                 success: false,

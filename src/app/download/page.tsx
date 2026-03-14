@@ -49,7 +49,7 @@ export default function DownloadPage() {
                 }
             })
             .then(url => setQrDataUrl(url))
-            .catch(err => console.error("QR Code Error:", err));
+            .catch(() => {/* Silenced for production */});
         }
     }, [appUrl]);
 

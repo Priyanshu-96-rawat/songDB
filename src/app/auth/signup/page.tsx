@@ -20,9 +20,9 @@ export default function SignupPage() {
 
     // Redirect if already logged in (must be in effect, not during render)
     useEffect(() => {
-        console.log("SignupPage Auth State:", user ? `User: ${user.email}` : "No user");
+        // Auth state check (silenced)
         if (user) {
-            console.log("SignupPage: User detected, redirecting to /");
+            // User detected, redirecting
             router.push('/');
         }
     }, [user, router]);
@@ -53,13 +53,13 @@ export default function SignupPage() {
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md bg-white/5 border border-white/10 backdrop-blur-2xl p-8 rounded-3xl relative z-10 shadow-2xl"
+                className="w-full max-w-md bg-white/5 border border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
             >
                 <div className="text-center mb-8">
                     <motion.div
                         initial={{ scale: 0.8 }}
                         animate={{ scale: 1 }}
-                        className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(0,255,255,0.3)]"
+                        className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(139,92,246,0.3)]"
                     >
                         <UserPlus className="text-primary-foreground w-8 h-8" />
                     </motion.div>
@@ -123,7 +123,7 @@ export default function SignupPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] disabled:opacity-50 mt-4 active:scale-95"
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:shadow-[0_0_30px_rgba(139,92,246,0.4)] disabled:opacity-50 mt-4 active:scale-95"
                     >
                         {loading ? "Creating Account..." : "CREATE ACCOUNT"}
                     </button>

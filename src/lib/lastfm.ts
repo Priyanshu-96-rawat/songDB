@@ -33,7 +33,7 @@ export async function fetchTrendingSongs(limit = 10) {
         const data = await res.json();
         return data.tracks?.track || [];
     } catch (err) {
-        console.warn("fetchTrendingSongs err", err);
+        // Silenced for production
         return [];
     }
 }
@@ -48,7 +48,7 @@ export async function fetchTopArtists(limit = 10) {
         const data = await res.json();
         return data.artists?.artist || [];
     } catch (err) {
-        console.warn("fetchTopArtists err", err);
+        // Silenced for production
         return [];
     }
 }
@@ -63,7 +63,7 @@ export async function fetchTopAlbums(limit = 10) {
         const data = await res.json();
         return data.albums?.album || [];
     } catch (err) {
-        console.warn("fetchTopAlbums err", err);
+        // Silenced for production
         return [];
     }
 }
@@ -78,7 +78,7 @@ export async function fetchArtistInfo(artistName: string) {
         const data = await res.json();
         return data.artist || null;
     } catch (err) {
-        console.warn("fetchArtistInfo err", err);
+        // Silenced for production
         return null;
     }
 }
@@ -93,7 +93,7 @@ export async function fetchArtistTopTracks(artistName: string, limit = 5) {
         const data = await res.json();
         return data.toptracks?.track || [];
     } catch (err) {
-        console.warn("fetchArtistTopTracks err", err);
+        // Silenced for production
         return [];
     }
 }
@@ -108,7 +108,7 @@ export async function fetchSongInfo(artistName: string, trackName: string) {
         const data = await res.json();
         return data.track || null;
     } catch (err) {
-        console.warn("fetchSongInfo err", err);
+        // Silenced for production
         return null;
     }
 }
@@ -123,7 +123,7 @@ export async function fetchTopTags(limit = 15) {
         const data = await res.json();
         return data.tags?.tag || [];
     } catch (err) {
-        console.warn("fetchTopTags err", err);
+        // Silenced for production
         return [];
     }
 }

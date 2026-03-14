@@ -20,7 +20,7 @@ The important architectural truth today is that SongDB does not yet run from a f
 ```mermaid
 flowchart LR
     A["Browser UI<br/>Next.js pages + components"] --> B["Client State<br/>AuthContext + Zustand + localStorage"]
-    A --> C["Route Handlers<br/>/api/music/* + /api/youtube-music/* + /api/youtube-stream"]
+    A --> C["Route Handlers<br/>/api/music/* + /api/youtube-music/*"]
     A --> D["Server Actions<br/>src/app/actions/index.ts"]
     B --> C
     D --> E["Firebase Admin<br/>Firestore + Auth token verification"]
@@ -29,6 +29,13 @@ flowchart LR
     G --> H["YouTube / YouTube Music"]
     E --> I["Firestore"]
 ```
+
+## Redesign Strategy (March 2026)
+
+The application is undergoing a transition to a premium "Spotify-like" interface. This includes:
+- **Immersive Player**: A mobile-first, full-screen playback surface with dynamic blurred backgrounds and high-polish animations.
+- **IFrame Stability**: Shifting away from direct audio stream extraction to a hidden YouTube IFrame for maximum reliability against YouTube's anti-bot measures.
+- **Premium UX**: Using `framer-motion` for fluid transitions and `Zustand` for lightning-fast state management.
 
 ## Frontend Architecture
 
@@ -101,9 +108,9 @@ Current groups:
 - `/api/youtube-music/*`
   - wrappers around `src/lib/youtube-stream.ts`
   - expose home shelves, explore shelves, artist/album/playlist data, lyrics, related items, suggestions, and up-next tracks
-- `/api/youtube-stream`
-  - resolves stream metadata and proxies the selected audio stream via direct YouTube extraction
-  - supports `Range` headers so the browser can seek inside audio streams
+- `/api/music/*`
+  - search and simple track info lookups using `youtubei.js` via `src/lib/youtube/youtubeService.ts`
+- **Playback**: Audio is handled via a hidden YouTube IFrame. Direct stream extraction via `/api/youtube-stream` has been deprecated for stability.
 
 ### 2. Server Actions
 
@@ -151,8 +158,8 @@ This is the only part of the current codebase that persists reviews and cloud fa
 ### Flow C: Playback, Lyrics, and Up Next
 
 1. `useYouTubePlayerStore.playTrack()` sets the current track and queue state.
-2. The store asks `audioEngine` to play `/api/youtube-stream?id=<videoId>`.
-3. The route handler resolves track metadata to score available formats, prefers the best playable audio-only stream, and returns a partial-content capable response.
+2. The store asks `audioEngine` to play the video using a hidden YouTube IFrame via the YouTube IFrame Player API.
+3. This ensures consistent playback without the overhead of stream extraction and format scoring.
 4. In parallel, the store fetches `/api/youtube-music/lyrics` and `/api/youtube-music/up-next`.
 5. The lyrics route returns caption-derived synced lyric lines when available, and falls back to duration-based estimated timings for official plain lyrics when needed.
 6. The player UI updates as audio events push progress and duration changes back into Zustand, and the active lyric line follows playback when synced data is available.

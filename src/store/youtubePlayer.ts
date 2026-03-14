@@ -16,7 +16,7 @@ export interface YouTubeTrack {
 export interface YouTubePlayerState {
     // Current track
     currentTrack: YouTubeTrack | null;
-    audioUrl: string | null;
+    isExpanded: boolean;
 
     // Queue
     queue: YouTubeTrack[];
@@ -56,7 +56,7 @@ export interface YouTubePlayerState {
 
     // Actions
     playTrack: (track: YouTubeTrack) => void;
-    setAudioUrl: (url: string | null) => void;
+    setIsExpanded: (expanded: boolean) => void;
     setIsPlaying: (playing: boolean) => void;
     togglePlay: () => void;
     setIsLoading: (loading: boolean) => void;
@@ -147,7 +147,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
 
     return {
         currentTrack: null,
-        audioUrl: null, // Legacy, kept for compatibility if needed
+        isExpanded: false,
         queue: [],
         history: [],
         upNextTracks: [],
@@ -179,7 +179,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
 
             set({
                 currentTrack: track,
-                audioUrl: null,
+                isExpanded: true,
                 isPlaying: true,
                 isLoading: true,
                 progress: 0,
@@ -211,7 +211,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
             get().fetchUpNext(track.videoId);
         },
 
-        setAudioUrl: (url) => set({ audioUrl: url, isLoading: !url }),
+        setIsExpanded: (expanded) => set({ isExpanded: expanded }),
 
         setIsPlaying: (playing) => {
             if (typeof window !== 'undefined') {
@@ -517,22 +517,41 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
         setUpNextTracks: (tracks) => set({ upNextTracks: tracks }),
 
         fetchUpNext: async (videoId: string) => {
+            const { upNextTracks, currentTrack } = get();
+            
+            // Limit fetch if we already have plenty of upcoming tracks
+            if (upNextTracks.length > 50) return;
+
             set({ isLoadingUpNext: true });
             try {
                 const res = await fetch(`/api/youtube-music/up-next?id=${videoId}&automix=true`);
                 const data = await res.json();
-                if (get().currentTrack?.videoId !== videoId) {
+                
+                // If user changed tracks while we were fetching
+                if (get().currentTrack?.videoId !== videoId && currentTrack?.videoId !== videoId) {
                     return;
                 }
 
                 if (data.success && data.data) {
-                    set({ upNextTracks: data.data, isLoadingUpNext: false });
+                    const currentIds = new Set([
+                        get().currentTrack?.videoId,
+                        ...get().queue.map(t => t.videoId),
+                        ...get().history.map(t => t.videoId),
+                        ...get().upNextTracks.map(t => t.videoId)
+                    ]);
+                    
+                    const newTracks = data.data.filter((t: YouTubeTrack) => !currentIds.has(t.videoId));
+                    
+                    set(s => ({ 
+                        upNextTracks: [...s.upNextTracks, ...newTracks], 
+                        isLoadingUpNext: false 
+                    }));
                     get().prefetchNextTrack();
                 } else {
                     set({ isLoadingUpNext: false });
                 }
             } catch {
-                if (get().currentTrack?.videoId === videoId) {
+                if (get().currentTrack?.videoId === videoId || currentTrack?.videoId === videoId) {
                     set({ isLoadingUpNext: false });
                 }
             }

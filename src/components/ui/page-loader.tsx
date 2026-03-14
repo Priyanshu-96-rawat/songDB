@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export function PageLoader() {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
             <motion.div
                 className="relative flex items-center justify-center w-16 h-16"
                 initial={{ opacity: 0, scale: 0.8 }}

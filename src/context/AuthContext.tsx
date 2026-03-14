@@ -26,9 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("AuthProvider: Initializing...");
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      console.log("Auth State Changed:", firebaseUser ? `User: ${firebaseUser.email}` : "No user");
       setUser(firebaseUser);
       setLoading(false);
     });
@@ -40,25 +38,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await signOut(auth);
     } catch (error) {
-      console.error("Logout error:", error);
+      // Silently handle logout errors
       setError(error instanceof Error ? error.message : "Failed to logout");
     }
   };
 
   const signInWithGoogle = async () => {
-    console.log("signInWithGoogle: Starting flow...");
     setError(null);
     try {
-      console.log("signInWithGoogle: Creating provider...");
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-      
-      console.log("signInWithGoogle: Calling signInWithPopup...");
       const result = await signInWithPopup(auth, provider);
-      console.log("signInWithGoogle: Response received:", result.user ? `User: ${result.user.email}` : "No user in result");
-      
       if (result.user) {
-        console.log("Google Sign-in Successful:", result.user.email);
         setUser(result.user);
       }
     } catch (err: any) {
@@ -72,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.error("Sign-in error:", errorCode, err.message);
+      // Catch and store error for UI display only
       setError(err.message || "Sign-in failed.");
     }
   };

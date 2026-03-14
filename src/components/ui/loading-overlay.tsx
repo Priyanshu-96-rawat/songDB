@@ -17,7 +17,7 @@ export function LoadingOverlay({ isVisible, message }: LoadingOverlayProps) {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] rounded-inherit"
+                    className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/60 rounded-inherit"
                 >
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}

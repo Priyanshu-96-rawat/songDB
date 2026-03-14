@@ -52,7 +52,7 @@ export default async function GenresPage() {
                             >
                                 {/* Gradient bg */}
                                 <div className={`absolute inset-0 bg-gradient-to-br ${colorClass} opacity-80 group-hover:opacity-100 transition-opacity duration-300`} />
-                                <div className="absolute inset-0 bg-card/70 backdrop-blur-sm" />
+                                <div className="absolute inset-0 bg-card/80" />
 
                                 {/* Decorative circle */}
                                 <div className="absolute -bottom-8 -right-8 w-28 h-28 rounded-full bg-white/5 group-hover:scale-150 transition-transform duration-500" />

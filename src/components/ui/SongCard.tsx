@@ -45,7 +45,7 @@ export function SongCard({ id, title, artist, coverArt, image, playCount, rank, 
                 playTrack(data.data.tracks[0]);
             }
         } catch (err) {
-            console.error("[SongCard] Play error:", err);
+            // Silenced for production
         } finally {
             setIsLoadingPlay(false);
         }
@@ -62,7 +62,7 @@ export function SongCard({ id, title, artist, coverArt, image, playCount, rank, 
                 addToQueue(data.data.tracks[0]);
             }
         } catch (err) {
-            console.error("[SongCard] Queue error:", err);
+            // Silenced for production
         }
     }, [title, artist, addToQueue]);
 
@@ -73,7 +73,7 @@ export function SongCard({ id, title, artist, coverArt, image, playCount, rank, 
         >
             {/* Rank badge */}
             {rank && (
-                <span className="absolute left-4 top-4 z-10 flex items-center justify-center h-6 w-6 rounded-full bg-black/60 backdrop-blur-sm text-[11px] font-bold text-white/90 ring-1 ring-white/10">
+                <span className="absolute left-4 top-4 z-10 flex items-center justify-center h-6 w-6 rounded-full bg-black/70 text-[11px] font-bold text-white/90 ring-1 ring-white/10">
                     {rank}
                 </span>
             )}
@@ -125,7 +125,7 @@ export function SongCard({ id, title, artist, coverArt, image, playCount, rank, 
                     <button
                         type="button"
                         onClick={handleAddToQueue}
-                        className="h-7 w-7 rounded-full bg-black/60 backdrop-blur-sm text-white/70 flex items-center justify-center hover:text-white hover:bg-black/80 transition-all ring-1 ring-white/10"
+                        className="h-7 w-7 rounded-full bg-black/70 text-white/70 flex items-center justify-center hover:text-white hover:bg-black/80 transition-all ring-1 ring-white/10"
                         title="Add to queue"
                     >
                         <ListMusic className="h-3.5 w-3.5" />

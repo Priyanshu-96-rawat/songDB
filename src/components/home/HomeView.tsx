@@ -312,13 +312,14 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
   };
 
   return (
-    <div className="px-6 py-6">
-      <div className="mb-8 grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_360px]">
+    <div className="w-full max-w-[1600px] mx-auto pb-8">
+      <div className="mb-8">
+
         <motion.section
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="shell-panel relative overflow-hidden rounded-[32px] px-6 py-6 md:px-8 md:py-8"
+          className="shell-panel relative overflow-hidden rounded-[32px] px-6 py-8 sm:px-8 sm:py-10"
         >
           {featuredTrack && (
             <>
@@ -418,48 +419,64 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
             )}
           </div>
         </motion.section>
-
-        <motion.aside
-          initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.08 }}
-          className="shell-panel-soft rounded-[32px] p-6"
-        >
-          <span className="premium-pill mb-4">
-            <TrendingUp className="h-3.5 w-3.5 text-primary" />
-            Quick Picks
-          </span>
-          <h2 className="font-display text-3xl leading-none text-white">
-            {quickPickTitle}
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-white/55">
-            {quickPickCopy}
-          </p>
-
-          <div className="mt-6 space-y-3">
-            {spotlightTracks.map((track) => (
-              <button
-                key={track.videoId}
-                type="button"
-                onClick={() => playTrack(track)}
-                className="flex w-full items-center gap-3 rounded-[22px] border border-white/8 bg-black/20 px-3 py-3 text-left transition hover:border-white/14 hover:bg-white/[0.04]"
-              >
-                <TrackThumb track={track} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {track.title}
-                  </p>
-                  <p className="truncate text-xs text-white/45">{track.artist}</p>
-                </div>
-                <Play className="h-4 w-4 shrink-0 text-primary" />
-              </button>
-            ))}
-          </div>
-        </motion.aside>
       </div>
 
+      {/* Quick Dial Section */}
+      <section className="mb-10">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="premium-pill">
+              <TrendingUp className="h-3.5 w-3.5 text-primary" />
+              Quick Dial
+            </span>
+          </div>
+          <p className="text-xs font-medium text-white/35 uppercase tracking-widest">
+            Based on your activity
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {rankedTracks.slice(0, 8).map((track, index) => (
+            <motion.button
+              key={track.videoId}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              onClick={() => playTrack(track)}
+              className="flex items-center gap-3 p-2 rounded-2xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.07] hover:border-white/[0.1] transition-all group text-left"
+            >
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl">
+                <TrackThumb track={track} />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Play className="h-5 w-5 fill-current text-white" />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white truncate group-hover:text-primary transition-colors">
+                  {track.title}
+                </p>
+                <p className="text-xs text-white/45 truncate">
+                  {track.artist}
+                </p>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      </section>
+
+      {/* Recommended for You Section */}
+      <section className="mb-10 rounded-[32px] shell-panel-soft py-6 pl-4 pr-1 sm:p-6">
+        <MusicShelf
+          title="Recommended for you"
+          subtitle="Tuned to your taste"
+          tracks={rankedTracks.slice(8, 24)}
+          layout="scroll"
+          maxItems={16}
+        />
+      </section>
+
+
       {flowFeed.length > 0 && (
-        <section className="mb-8 rounded-[32px] shell-panel-soft p-5 md:p-6">
+        <section className="mb-8 rounded-[32px] shell-panel-soft p-5 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <span className="premium-pill mb-3">
@@ -571,7 +588,7 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
       )}
 
       {recentlyPlayed.length > 0 && (
-        <div className="mb-6 rounded-[30px] shell-panel-soft p-5 md:p-6">
+        <div className="mb-6 rounded-[30px] shell-panel-soft py-5 pl-4 pr-1 sm:p-6">
           <MusicShelf
             title="Recently Played"
             subtitle="Pick up where you left off"
@@ -585,7 +602,7 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
 
       <div className="space-y-6">
         {shelves.map((shelf, index) => (
-          <div key={`home-${index}`} className="rounded-[30px] shell-panel-soft p-5 md:p-6">
+          <div key={`home-${index}`} className="rounded-[30px] shell-panel-soft py-5 pl-4 pr-1 sm:p-6">
             <MusicShelf
               title={shelf.title}
               subtitle={index === 0 ? "Fresh from the home feed" : undefined}

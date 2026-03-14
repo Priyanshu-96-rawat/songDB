@@ -45,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${manrope.variable} ${fraunces.variable} min-h-screen bg-background text-foreground antialiased`}>
+      <body className={`${manrope.variable} ${fraunces.variable} min-h-screen bg-background text-foreground antialiased overflow-x-hidden`}>
         <AuthProvider>
           <LibraryStoreHydrator />
           <SplashScreen />
@@ -59,11 +59,10 @@ export default function RootLayout({
                 {children}
               </main>
               <footer className="px-3 pb-32 pt-2 md:px-5 md:pb-6">
-                <div className="shell-panel-soft flex items-center justify-between rounded-[26px] px-4 py-3 text-[11px] text-white/26">
-                  <p className="uppercase tracking-[0.24em] text-white/18">
+                <div className="shell-panel-soft flex items-center justify-center rounded-[26px] px-4 py-3 text-[11px] text-white/26">
+                  <p className="uppercase tracking-[0.24em] text-white/18 text-center w-full">
                     Powered by YouTube Music
                   </p>
-                  <p className="font-bold tracking-[0.1em] uppercase text-primary/40">Made by Priyanshu</p>
                 </div>
               </footer>
             </div>

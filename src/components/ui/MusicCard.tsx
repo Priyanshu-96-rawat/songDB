@@ -69,7 +69,7 @@ export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
                             className="absolute inset-0 flex items-end p-3"
                             style={getDynamicGradientStyle(`${track.title} ${track.artist}`)}
                         >
-                            <div className="rounded-2xl bg-black/30 px-3 py-2 backdrop-blur-sm">
+                            <div className="rounded-2xl bg-black/50 px-3 py-2">
                                 <p className="line-clamp-2 text-xs font-semibold text-white">
                                     {track.title}
                                 </p>
@@ -79,7 +79,7 @@ export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
                     )}
                 </div>
                 
-                <div className="absolute left-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/72 backdrop-blur-sm">
+                <div className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/72">
                     {track.duration || "Live"}
                 </div>
                 
@@ -90,7 +90,7 @@ export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
                 >
                     <TrackActionMenu
                         track={track}
-                        triggerClassName="rounded-full bg-black/55 p-2 text-white/70 ring-1 ring-white/10 transition hover:bg-black/80 hover:text-white backdrop-blur-md"
+                        triggerClassName="rounded-full bg-black/60 p-2 text-white/70 ring-1 ring-white/10 transition hover:bg-black/80 hover:text-white"
                     />
                 </div>
 
@@ -100,7 +100,7 @@ export function MusicCard({ track, size = "md", subtitle }: MusicCardProps) {
                         <div className="pointer-events-auto absolute bottom-3 right-3 flex items-center gap-2">
                             <span
                                 onClick={(e) => { e.stopPropagation(); toggleLike(track); }}
-                                className="p-1.5 rounded-full bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 transition-colors cursor-pointer"
                             >
                                 <Heart className={`h-4 w-4 ${liked ? 'fill-[var(--color-primary)] text-[var(--color-primary)]' : 'text-white'}`} />
                             </span>

@@ -30,6 +30,7 @@ export default function SearchPage() {
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
 
     const tabs: { key: SearchTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
         { key: "songs", label: "Songs", icon: Music2 },
@@ -39,33 +40,49 @@ export default function SearchPage() {
         { key: "playlists", label: "Playlists", icon: ListMusic },
     ];
 
-    const doSearch = useCallback(async (q: string, tab?: SearchTab) => {
+    const doSearch = useCallback(async (q: string, tab?: SearchTab, isRetry = false) => {
         if (!q.trim()) return;
         setLoading(true);
         setHasSearched(true);
         setShowSuggestions(false);
+        setSelectedIndex(-1);
         try {
             const type = tab || activeTab;
             const apiType = type === "songs" ? "songs" : type;
             const res = await fetch(`/api/youtube-search?q=${encodeURIComponent(q)}&type=${apiType}`);
             const data = await res.json();
+            
+            let finalTracks = data.data?.tracks ?? [];
+            
+            // Typo Resilience: If no tracks found and not already retrying, try with top suggestion if available
+            if (finalTracks.length === 0 && !isRetry && suggestions.length > 0) {
+                const topSug = suggestions[0];
+                const retryRes = await fetch(`/api/youtube-search?q=${encodeURIComponent(topSug)}&type=${apiType}`);
+                const retryData = await retryRes.json();
+                if (retryData.success && retryData.data?.tracks?.length > 0) {
+                    setQuery(topSug);
+                    finalTracks = retryData.data.tracks;
+                    data.data = { ...data.data, ...retryData.data };
+                }
+            }
+
             if (data.success && data.data) {
                 setResults({
-                    tracks: data.data.tracks ?? [],
-                    artists: (data.data.artists ?? []).map((artist: { artistId: string; name: string; thumbnail: string; subscribers?: string }) => ({
+                    tracks: finalTracks,
+                    artists: (data.data.artists ?? []).map((artist: any) => ({
                         id: artist.artistId,
                         name: artist.name,
                         thumbnail: artist.thumbnail,
                         subscribers: artist.subscribers,
                     })),
-                    albums: (data.data.albums ?? []).map((album: { albumId: string; title: string; artist: string; thumbnail: string; year?: string }) => ({
+                    albums: (data.data.albums ?? []).map((album: any) => ({
                         id: album.albumId,
                         title: album.title,
                         artist: album.artist,
                         thumbnail: album.thumbnail,
                         year: album.year,
                     })),
-                    playlists: (data.data.playlists ?? []).map((playlist: { playlistId: string; title: string; author?: string; thumbnail: string; trackCount?: number }) => ({
+                    playlists: (data.data.playlists ?? []).map((playlist: any) => ({
                         id: playlist.playlistId,
                         title: playlist.title,
                         author: playlist.author ?? 'Unknown',
@@ -75,11 +92,11 @@ export default function SearchPage() {
                 });
             }
         } catch (err) {
-            console.error("[Search] Error:", err);
+            // Silenced for production
         } finally {
             setLoading(false);
         }
-    }, [activeTab]);
+    }, [activeTab, suggestions]);
 
     // Search on initial query
     useEffect(() => {
@@ -115,6 +132,27 @@ export default function SearchPage() {
         }
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (!showSuggestions || suggestions.length === 0) return;
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : prev));
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+        } else if (e.key === "Enter" && selectedIndex >= 0) {
+            e.preventDefault();
+            const sug = suggestions[selectedIndex];
+            setQuery(sug);
+            setShowSuggestions(false);
+            router.push(`/search?q=${encodeURIComponent(sug)}`);
+            doSearch(sug);
+        } else if (e.key === "Escape") {
+            setShowSuggestions(false);
+        }
+    };
+
     const handleTabChange = (tab: SearchTab) => {
         setActiveTab(tab);
         if (query.trim()) {
@@ -130,7 +168,6 @@ export default function SearchPage() {
             transition={{ duration: 0.4 }}
             className="px-6 py-6"
         >
-            {/* Search bar */}
             <div className="relative max-w-2xl mb-8">
                 <form onSubmit={handleSearch}>
                     <div className="relative">
@@ -138,8 +175,13 @@ export default function SearchPage() {
                         <input
                             type="text"
                             value={query}
-                            onChange={(e) => { setQuery(e.target.value); setShowSuggestions(true); }}
+                            onChange={(e) => { 
+                                setQuery(e.target.value); 
+                                setShowSuggestions(true); 
+                                setSelectedIndex(-1);
+                            }}
                             onFocus={() => setShowSuggestions(true)}
+                            onKeyDown={handleKeyDown}
                             placeholder="Search songs, artists, albums..."
                             className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/[0.06] border border-white/[0.06] text-white text-sm placeholder:text-white/25 outline-none focus:border-white/15 focus:bg-white/[0.08] transition-all"
                         />
@@ -147,9 +189,8 @@ export default function SearchPage() {
                     </div>
                 </form>
 
-                {/* Suggestions dropdown */}
                 {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 rounded-xl bg-[#1a1a1a] border border-white/[0.06] shadow-xl z-20 overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-[#0f0f0f] border border-white/10 shadow-2xl z-20 overflow-hidden py-2">
                         {suggestions.map((sug, i) => (
                             <button
                                 key={i}
@@ -159,20 +200,21 @@ export default function SearchPage() {
                                     router.push(`/search?q=${encodeURIComponent(sug)}`);
                                     doSearch(sug);
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.05] transition-colors text-left text-sm text-white/70 hover:text-white"
+                                onMouseEnter={() => setSelectedIndex(i)}
+                                className={`w-full flex items-center gap-4 px-5 py-3 transition-all text-left text-sm ${
+                                    selectedIndex === i ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/[0.05]"
+                                }`}
                             >
-                                <Search className="h-4 w-4 text-white/20 flex-shrink-0" />
-                                {sug}
+                                <Search className={`h-4 w-4 flex-shrink-0 transition-colors ${selectedIndex === i ? "text-[var(--color-primary)]" : "text-white/20"}`} />
+                                <span className="truncate">{sug}</span>
                             </button>
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* Click outside to close suggestions */}
             {showSuggestions && <div className="fixed inset-0 z-10" onClick={() => setShowSuggestions(false)} />}
 
-            {/* Tabs */}
             {hasSearched && (
                 <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide">
                     {tabs.map(({ key, label, icon: Icon }) => (
@@ -191,14 +233,12 @@ export default function SearchPage() {
                 </div>
             )}
 
-            {/* Results */}
             {loading ? (
                 <div className="py-20 flex justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
             ) : hasSearched ? (
                 <div>
-                    {/* Songs/Videos tab */}
                     {(activeTab === "songs" || activeTab === "videos") && results.tracks.length > 0 && (
                         <div className="space-y-0.5">
                             {results.tracks.map((track, i) => (
@@ -207,7 +247,6 @@ export default function SearchPage() {
                         </div>
                     )}
 
-                    {/* Artists tab */}
                     {activeTab === "artists" && results.artists.length > 0 && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                             {results.artists.map((artist) => (
@@ -224,7 +263,6 @@ export default function SearchPage() {
                         </div>
                     )}
 
-                    {/* Albums tab */}
                     {activeTab === "albums" && results.albums.length > 0 && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {results.albums.map((album) => (
@@ -241,7 +279,6 @@ export default function SearchPage() {
                         </div>
                     )}
 
-                    {/* Playlists tab */}
                     {activeTab === "playlists" && results.playlists.length > 0 && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {results.playlists.map((pl) => (
@@ -258,7 +295,6 @@ export default function SearchPage() {
                         </div>
                     )}
 
-                    {/* No results */}
                     {results.tracks.length === 0 && results.artists.length === 0 && results.albums.length === 0 && results.playlists.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-20">
                             <Music2 className="h-12 w-12 text-white/10 mb-4" />
@@ -268,7 +304,6 @@ export default function SearchPage() {
                     )}
                 </div>
             ) : (
-                /* Initial state */
                 <div className="flex flex-col items-center justify-center py-20">
                     <Search className="h-16 w-16 text-white/10 mb-4" />
                     <p className="text-lg font-semibold text-white/30">Search YouTube Music</p>

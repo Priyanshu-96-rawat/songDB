@@ -44,7 +44,7 @@ export function TrackRow({ track, index, showIndex = false, compact = false }: T
             <div className={`relative ${compact ? 'h-10 w-10' : 'h-12 w-12'} rounded-xl overflow-hidden bg-white/[0.05] flex-shrink-0 shadow-lg`}>
                 <Image src={track.thumbnail} alt={track.title} fill className="object-cover transition-transform duration-500 group-hover:scale-110" sizes={compact ? "40px" : "48px"} />
                 {isCurrentTrack && isPlaying && (
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <div className="flex items-end gap-[2px] h-3.5">
                             <span className="eq-bar w-[3px] rounded-full" style={{ animationDuration: '0.5s' }} />
                             <span className="eq-bar w-[3px] rounded-full" style={{ animationDuration: '0.7s' }} />
@@ -53,7 +53,7 @@ export function TrackRow({ track, index, showIndex = false, compact = false }: T
                     </div>
                 )}
                 {!isCurrentTrack && (
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Play className="h-4.5 w-4.5 text-white fill-white drop-shadow-md active:scale-90 transition-transform" />
                     </div>
                 )}
@@ -75,7 +75,7 @@ export function TrackRow({ track, index, showIndex = false, compact = false }: T
                 className={`p-2 rounded-full transition-all duration-300 flex-shrink-0 active:scale-75 ${liked ? 'opacity-100' : (isMounted ? 'opacity-100 sm:opacity-0 group-hover:opacity-100 hover:bg-white/10' : 'opacity-0')}`}
                 title={liked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}
             >
-                <Heart className={`h-4.5 w-4.5 transition-colors ${liked ? 'fill-primary text-primary filter drop-shadow-[0_0_8px_rgba(0,255,255,0.3)]' : 'text-white/20 hover:text-white'}`} />
+                <Heart className={`h-4.5 w-4.5 transition-colors ${liked ? 'fill-primary text-primary filter drop-shadow-[0_0_8px_rgba(139,92,246,0.3)]' : 'text-white/20 hover:text-white'}`} />
             </button>
 
             {/* Duration */}

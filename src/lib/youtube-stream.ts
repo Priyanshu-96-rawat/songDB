@@ -594,7 +594,7 @@ export async function searchYouTubeMusic(
             );
         }
     } catch (err) {
-        console.error('[search] Error:', err);
+        // Silenced for production
     }
 
     return { tracks, artists, albums, playlists };
@@ -621,7 +621,7 @@ export async function getMusicSearchSuggestions(query: string): Promise<string[]
         const suggestions = await yt.getSearchSuggestions(query);
         return Array.isArray(suggestions) ? suggestions.slice(0, 10) : [];
     } catch (err) {
-        console.error('[suggestions] Error:', err);
+        // Silenced for production
         return [];
     }
 }
@@ -861,7 +861,7 @@ export async function getYTMusicLyrics(videoId: string, durationSeconds?: number
             return captionLyrics;
         }
     } catch (err) {
-        console.error('[lyrics-fallback] Error:', err);
+        // Silenced for production
     }
 
     const yt = await getClient();
@@ -883,7 +883,7 @@ export async function getYTMusicLyrics(videoId: string, durationSeconds?: number
     } catch (err) {
         const message = err instanceof Error ? err.message : '';
         if (!message.toLowerCase().includes('lyrics not available')) {
-            console.error('[lyrics] Error:', err);
+            // Silenced for production
         }
     }
 
@@ -935,7 +935,7 @@ export async function getYTMusicUpNext(videoId: string, automix = true): Promise
 
         return tracks;
     } catch (err) {
-        console.error('[upnext] Error:', err);
+        // Silenced for production
         return [];
     }
 }
@@ -974,7 +974,7 @@ export async function getYTMusicRelated(videoId: string): Promise<Array<{ title:
 
         return shelves;
     } catch (err) {
-        console.error('[related] Error:', err);
+        // Silenced for production
         return [];
     }
 }
@@ -986,7 +986,7 @@ export async function getYTMusicArtist(artistId: string) {
         const artist = await yt.music.getArtist(artistId) as unknown as Record<string, unknown>;
         return artist;
     } catch (err) {
-        console.error('[artist] Error:', err);
+        // Silenced for production
         return null;
     }
 }
@@ -998,7 +998,7 @@ export async function getYTMusicAlbum(albumId: string) {
         const album = await yt.music.getAlbum(albumId) as unknown as Record<string, unknown>;
         return album;
     } catch (err) {
-        console.error('[album] Error:', err);
+        // Silenced for production
         return null;
     }
 }
@@ -1010,7 +1010,7 @@ export async function getYTMusicPlaylist(playlistId: string) {
         const playlist = await yt.music.getPlaylist(playlistId) as unknown as Record<string, unknown>;
         return playlist;
     } catch (err) {
-        console.error('[playlist] Error:', err);
+        // Silenced for production
         return null;
     }
 }

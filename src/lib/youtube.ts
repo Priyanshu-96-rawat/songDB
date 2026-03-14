@@ -4,7 +4,7 @@ import 'server-only';
 export async function fetchYouTubeEmbed(query: string) {
     const apiKey = process.env.YOUTUBE_API_KEY;
     if (!apiKey) {
-        console.warn("YouTube API Key missing");
+        // API Key missing
         return null;
     }
 
@@ -20,7 +20,7 @@ export async function fetchYouTubeEmbed(query: string) {
         }
         return null;
     } catch (error) {
-        console.error("YouTube fetch error:", error);
+        // Silenced for production
         return null;
     }
 }

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error('[youtube-music/playlist] API error:', error);
+        // Silenced for production
         return NextResponse.json(
             { success: false, error: 'Internal server error', message: 'Failed to get playlist data' },
             { status: 500 }

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error('[youtube-music/album] API error:', error);
+        // Silenced for production
         return NextResponse.json(
             { success: false, error: 'Internal server error', message: 'Failed to get album data' },
             { status: 500 }

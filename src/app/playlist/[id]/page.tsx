@@ -32,7 +32,7 @@ export default function PlaylistPage() {
                     setPlaylist(data.data);
                 }
             } catch (err) {
-                console.error("[Playlist] Error:", err);
+                // Silenced for production
             } finally {
                 setLoading(false);
             }

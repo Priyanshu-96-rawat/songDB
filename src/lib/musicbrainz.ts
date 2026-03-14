@@ -13,7 +13,7 @@ export async function searchArtistsMB(query: string) {
         const data = await res.json();
         return data.artists || [];
     } catch (err) {
-        console.warn("searchArtistsMB err", err);
+        // Silenced for production
         return [];
     }
 }
@@ -27,7 +27,7 @@ export async function getArtistDiscographyMB(mbid: string) {
         const data = await res.json();
         return data.releases || [];
     } catch (err) {
-        console.warn("getArtistDiscographyMB err", err);
+        // Silenced for production
         return [];
     }
 }
@@ -41,7 +41,7 @@ export async function getAlbumTracklistMB(releaseMbid: string) {
         const data = await res.json();
         return data.recordings || [];
     } catch (err) {
-        console.warn("getAlbumTracklistMB err", err);
+        // Silenced for production
         return [];
     }
 }
@@ -65,7 +65,7 @@ export async function fetchImageFromDeezer(query: string, type: 'artist' | 'trac
         }
         return null;
     } catch (e) {
-        console.warn('Deezer fallback failed', e);
+        // Silenced for production
         return null;
     }
 }
@@ -93,7 +93,7 @@ export async function fetchImageFromiTunes(trackName: string, artistName?: strin
         }
         return null;
     } catch (e) {
-        console.warn('iTunes fallback failed', e);
+        // Silenced for production
         return null;
     }
 }

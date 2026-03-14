@@ -16,18 +16,38 @@ const navItems = [
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <div
-      className={`relative flex items-center justify-center rounded-[24px] bg-gradient-to-br from-primary via-secondary to-accent shadow-lg shadow-primary/25 ${
+      className={`relative flex items-center justify-center rounded-[24px] overflow-hidden shadow-lg shadow-[rgba(139,92,246,0.25)] ${
         compact ? "h-11 w-11" : "h-14 w-14"
       }`}
+      style={{
+        background: "linear-gradient(135deg, #8B5CF6 0%, #3B82F6 40%, #06B6D4 100%)",
+      }}
     >
-      <svg width={compact ? 18 : 22} height={compact ? 18 : 22} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="16" width="4" height="8" rx="2" fill="white" />
-        <rect x="11" y="10" width="4" height="20" rx="2" fill="white" />
-        <rect x="18" y="6" width="4" height="28" rx="2" fill="white" />
-        <rect x="25" y="12" width="4" height="16" rx="2" fill="white" />
-        <rect x="32" y="14" width="4" height="12" rx="2" fill="white" />
+      {/* Inner glow */}
+      <div
+        className="absolute inset-0 opacity-25"
+        style={{
+          background: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, transparent 50%)",
+        }}
+      />
+      <svg
+        width={compact ? 22 : 28}
+        height={compact ? 22 : 28}
+        viewBox="0 0 44 44"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="relative z-10"
+      >
+        <circle cx="22" cy="22" r="18" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" fill="none" />
+        <circle cx="22" cy="22" r="13" stroke="rgba(255,255,255,0.12)" strokeWidth="1" fill="none" />
+        <circle cx="22" cy="22" r="3" fill="white" opacity="0.9" />
+        <path
+          d="M26 14V28.5C26 30.433 24.433 32 22.5 32C20.567 32 19 30.433 19 28.5C19 26.567 20.567 25 22.5 25C23.163 25 23.785 25.167 24.331 25.462V14L30 12V17L26 14Z"
+          fill="white"
+          opacity="0.95"
+        />
       </svg>
-      <div className="absolute inset-0 -z-10 rounded-[24px] bg-primary/20 blur-lg" />
+      <div className="absolute inset-0 -z-10 rounded-[24px] bg-[rgba(139,92,246,0.2)] blur-lg" />
     </div>
   );
 }

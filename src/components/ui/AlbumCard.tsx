@@ -39,7 +39,7 @@ export function AlbumCard({ id, title, artist, coverArt, year }: AlbumCardProps)
                 )}
                 {/* Year Badge */}
                 {year && (
-                    <div className="absolute top-2 right-2 z-10 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm border border-white/10 text-[10px] font-bold text-white/80">
+                    <div className="absolute top-2 right-2 z-10 px-2 py-0.5 rounded-md bg-black/70 border border-white/10 text-[10px] font-bold text-white/80">
                         {year}
                     </div>
                 )}

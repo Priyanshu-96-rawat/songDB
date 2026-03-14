@@ -22,7 +22,7 @@ export function PlayerBar() {
     if (!currentSong) return null; // Only show if a song is loaded
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-muted px-4 py-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <div className="fixed bottom-0 left-0 right-0 bg-card/95 border-t border-muted px-4 py-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
             <div className="container mx-auto max-w-7xl flex items-center justify-between gap-4">
 
                 {/* Left: Song Info */}

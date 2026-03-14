@@ -33,7 +33,7 @@ export default function AlbumPage() {
                     setAlbum(data.data);
                 }
             } catch (err) {
-                console.error("[Album] Error:", err);
+                // Silenced for production
             } finally {
                 setLoading(false);
             }

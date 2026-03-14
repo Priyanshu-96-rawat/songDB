@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error('[youtube-music/suggestions] API error:', error);
+        // Internal error handled via response envelope
         return NextResponse.json(
             {
                 success: false,
