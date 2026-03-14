@@ -45,12 +45,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${manrope.variable} ${fraunces.variable} min-h-screen bg-background text-foreground antialiased overflow-x-hidden`}>
+      <body className={`${manrope.variable} ${fraunces.variable} min-h-screen bg-background text-foreground antialiased`}>
         <AuthProvider>
           <LibraryStoreHydrator />
           <SplashScreen />
           
-          <div className="flex min-h-screen flex-col">
+          <div className="flex min-h-screen flex-col overflow-x-hidden">
             <Sidebar />
             
             <div className="relative z-10 flex flex-1 flex-col pl-0 sm:pl-[5.5rem] lg:pl-[19.25rem]">

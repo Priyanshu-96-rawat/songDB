@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
             },
             { status: 200 }
         );
-    } catch (error) {
+    } catch {
         // Internal error handled via response envelope
         return NextResponse.json(
             {

@@ -29,7 +29,7 @@ export function HeroPlayButton({ title, artist }: HeroPlayButtonProps) {
             if (data.success && data.data.length > 0) {
                 playTrack(data.data[0]);
             }
-        } catch (err) {
+        } catch {
             // Silenced for production
         } finally {
             setIsLoading(false);

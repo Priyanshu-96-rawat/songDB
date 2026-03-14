@@ -593,7 +593,7 @@ export async function searchYouTubeMusic(
                     .filter((item): item is YouTubeMusicPlaylist => Boolean(item))
             );
         }
-    } catch (err) {
+    } catch {
         // Silenced for production
     }
 
@@ -620,7 +620,7 @@ export async function getMusicSearchSuggestions(query: string): Promise<string[]
         // yt.getSearchSuggestions returns string[] directly
         const suggestions = await yt.getSearchSuggestions(query);
         return Array.isArray(suggestions) ? suggestions.slice(0, 10) : [];
-    } catch (err) {
+    } catch {
         // Silenced for production
         return [];
     }
@@ -863,7 +863,7 @@ export async function getYTMusicLyrics(videoId: string, durationSeconds?: number
         if (captionLyrics?.synced) {
             return captionLyrics;
         }
-    } catch (err) {
+    } catch {
         // Silenced for production
     }
 
@@ -937,7 +937,7 @@ export async function getYTMusicUpNext(videoId: string, automix = true): Promise
         }
 
         return tracks;
-    } catch (err) {
+    } catch {
         // Silenced for production
         return [];
     }
@@ -976,7 +976,7 @@ export async function getYTMusicRelated(videoId: string): Promise<Array<{ title:
         }
 
         return shelves;
-    } catch (err) {
+    } catch {
         // Silenced for production
         return [];
     }
@@ -988,7 +988,7 @@ export async function getYTMusicArtist(artistId: string) {
     try {
         const artist = await yt.music.getArtist(artistId) as unknown as Record<string, unknown>;
         return artist;
-    } catch (err) {
+    } catch {
         // Silenced for production
         return null;
     }
@@ -1000,7 +1000,7 @@ export async function getYTMusicAlbum(albumId: string) {
     try {
         const album = await yt.music.getAlbum(albumId) as unknown as Record<string, unknown>;
         return album;
-    } catch (err) {
+    } catch {
         // Silenced for production
         return null;
     }
@@ -1012,7 +1012,7 @@ export async function getYTMusicPlaylist(playlistId: string) {
     try {
         const playlist = await yt.music.getPlaylist(playlistId) as unknown as Record<string, unknown>;
         return playlist;
-    } catch (err) {
+    } catch {
         // Silenced for production
         return null;
     }

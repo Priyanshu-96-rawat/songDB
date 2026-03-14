@@ -12,6 +12,7 @@ import {
     Radio,
     Share2,
     StepForward,
+    X,
 } from "lucide-react";
 import { useLibraryStore } from "@/store/library";
 import { useYouTubePlayerStore, type YouTubeTrack } from "@/store/youtubePlayer";
@@ -45,7 +46,6 @@ function formatRemainingSleep(endsAt: number | null) {
 export function TrackActionMenu({
     track,
     align = "right",
-    side = "bottom",
     showSleepTimer = false,
     triggerClassName = "rounded-full p-2 text-white/40 transition hover:bg-white/10 hover:text-white",
     iconClassName = "h-4 w-4",
@@ -63,6 +63,8 @@ export function TrackActionMenu({
         addToQueue,
         playNext,
         startRadio,
+        stopRadio,
+        radioMode,
         setSleepTimer,
         clearSleepTimer,
         sleepTimerMode,
@@ -246,6 +248,20 @@ export function TrackActionMenu({
                                 <Radio className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
                                 Start mix
                             </button>
+                            {radioMode && (
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        stopRadio();
+                                        setOpen(false);
+                                    }}
+                                    className={menuButtonClassName}
+                                >
+                                    <X className="h-4 w-4 opacity-70 transition-opacity group-hover:opacity-100" />
+                                    Stop radio mix
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={(event) => {

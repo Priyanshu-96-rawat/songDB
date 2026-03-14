@@ -168,7 +168,7 @@ export function ReviewSection({
                 setReviewText("");
                 setSuccess(true);
                 setTimeout(() => setSuccess(false), 3000);
-            } catch (e: unknown) {
+            } catch (e) {
                 setError(e instanceof Error ? e.message : "Failed to submit review.");
             }
         });

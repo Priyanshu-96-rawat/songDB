@@ -19,7 +19,7 @@ export async function fetchYouTubeEmbed(query: string) {
             return `https://www.youtube.com/embed/${videoId}`;
         }
         return null;
-    } catch (error) {
+    } catch {
         // Silenced for production
         return null;
     }

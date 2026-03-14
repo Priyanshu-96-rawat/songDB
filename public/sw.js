@@ -1,4 +1,4 @@
-const CACHE_NAME = 'songdb-v3';
+const CACHE_NAME = 'songdb-v4';
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',

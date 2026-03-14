@@ -69,7 +69,7 @@ export function SearchBar() {
             setQuerySuggestions(data.data.slice(0, 5));
           }
         }
-      } catch (error: unknown) {
+      } catch {
         // Silently handle error to maintain clean console
       } finally {
         setIsSearching(false);
@@ -133,7 +133,7 @@ export function SearchBar() {
         handlePlaySuggestion(suggestions[selectedIndex - queryCount]);
       } else {
         // Default submit
-        handleSubmit(event as any);
+        handleSubmit(event as unknown as React.FormEvent);
       }
     } else if (event.key === "Escape") {
       setIsFocused(false);
@@ -171,9 +171,7 @@ export function SearchBar() {
             className="flex-1 bg-transparent text-sm font-medium tracking-tight text-white placeholder:text-white/28 [border:none] [box-shadow:none] [outline:none]"
           />
 
-          {isSearching ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
-          ) : query ? (
+          {query ? (
             <button
               type="button"
               onClick={() => {

@@ -12,7 +12,7 @@ export async function searchArtistsMB(query: string) {
         );
         const data = await res.json();
         return data.artists || [];
-    } catch (err) {
+    } catch {
         // Silenced for production
         return [];
     }
@@ -26,7 +26,7 @@ export async function getArtistDiscographyMB(mbid: string) {
         );
         const data = await res.json();
         return data.releases || [];
-    } catch (err) {
+    } catch {
         // Silenced for production
         return [];
     }
@@ -40,7 +40,7 @@ export async function getAlbumTracklistMB(releaseMbid: string) {
         );
         const data = await res.json();
         return data.recordings || [];
-    } catch (err) {
+    } catch {
         // Silenced for production
         return [];
     }
@@ -64,7 +64,7 @@ export async function fetchImageFromDeezer(query: string, type: 'artist' | 'trac
             }
         }
         return null;
-    } catch (e) {
+    } catch {
         // Silenced for production
         return null;
     }
@@ -92,7 +92,7 @@ export async function fetchImageFromiTunes(trackName: string, artistName?: strin
             }
         }
         return null;
-    } catch (e) {
+    } catch {
         // Silenced for production
         return null;
     }

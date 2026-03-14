@@ -31,7 +31,7 @@ export default function PlaylistPage() {
                 if (data.success && data.data) {
                     setPlaylist(data.data);
                 }
-            } catch (err) {
+            } catch {
                 // Silenced for production
             } finally {
                 setLoading(false);

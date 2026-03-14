@@ -32,7 +32,7 @@ export default function AlbumPage() {
                 if (data.success && data.data) {
                     setAlbum(data.data);
                 }
-            } catch (err) {
+            } catch {
                 // Silenced for production
             } finally {
                 setLoading(false);

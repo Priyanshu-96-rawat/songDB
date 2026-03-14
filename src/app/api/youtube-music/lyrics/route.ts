@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
             },
             { status: 200 }
         );
-    } catch (error) {
+    } catch {
         // Silenced for production
         return NextResponse.json(
             {

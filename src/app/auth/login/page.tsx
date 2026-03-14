@@ -33,7 +33,7 @@ export default function LoginPage() {
         try {
             await signInWithEmailAndPassword(auth, email, password);
             router.push("/");
-        } catch (err: unknown) {
+        } catch (err) {
             const msg = err instanceof Error ? err.message : "Failed to log in";
             // Catch error for local state display
             setLocalError(msg);
@@ -47,7 +47,7 @@ export default function LoginPage() {
         setLocalError("");
         try {
             await signInWithGoogle();
-        } catch (err: any) {
+        } catch (err) {
             console.error("Google sign-in error:", err);
             const msg = err instanceof Error ? err.message : "Google sign-in failed";
             setLocalError(msg);

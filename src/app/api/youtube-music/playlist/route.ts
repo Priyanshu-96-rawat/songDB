@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
             { success: true, data: playlist, message: 'Playlist retrieved' },
             { status: 200 }
         );
-    } catch (error) {
+    } catch {
         // Silenced for production
         return NextResponse.json(
             { success: false, error: 'Internal server error', message: 'Failed to get playlist data' },

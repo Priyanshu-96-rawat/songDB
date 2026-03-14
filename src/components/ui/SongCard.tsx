@@ -44,7 +44,7 @@ export function SongCard({ id, title, artist, coverArt, image, playCount, rank, 
             if (data.success && data.data?.tracks?.length > 0) {
                 playTrack(data.data.tracks[0]);
             }
-        } catch (err) {
+        } catch {
             // Silenced for production
         } finally {
             setIsLoadingPlay(false);
@@ -61,7 +61,7 @@ export function SongCard({ id, title, artist, coverArt, image, playCount, rank, 
             if (data.success && data.data?.tracks?.length > 0) {
                 addToQueue(data.data.tracks[0]);
             }
-        } catch (err) {
+        } catch {
             // Silenced for production
         }
     }, [title, artist, addToQueue]);

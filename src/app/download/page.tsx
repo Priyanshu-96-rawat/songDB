@@ -19,11 +19,13 @@ export default function DownloadPage() {
     const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
     useEffect(() => {
-        setHasMounted(true);
-        const matchMedia = window.matchMedia("(display-mode: standalone)");
-        if (matchMedia.matches) {
-            setIsInstalled(true);
-        }
+        setTimeout(() => {
+            setHasMounted(true);
+            const matchMedia = window.matchMedia("(display-mode: standalone)");
+            if (matchMedia.matches) {
+                setIsInstalled(true);
+            }
+        }, 0);
 
         const handler = (e: Event) => {
             e.preventDefault();

@@ -12,7 +12,7 @@ if (!admin.apps.length) {
                 projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
             }),
         });
-    } catch (error) {
+    } catch {
         // Firebase admin initialization failed
     }
 }

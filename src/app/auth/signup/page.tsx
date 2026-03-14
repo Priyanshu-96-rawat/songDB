@@ -37,7 +37,7 @@ export default function SignupPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             await updateProfile(userCredential.user, { displayName: name });
             router.push("/");
-        } catch (err: unknown) {
+        } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to create account");
         } finally {
             setLoading(false);

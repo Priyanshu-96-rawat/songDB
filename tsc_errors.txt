@@ -1,0 +1,13 @@
+src/app/auth/login/page.tsx(37,25): error TS2304: Cannot find name 'err'.
+src/app/auth/login/page.tsx(37,48): error TS2304: Cannot find name 'err'.
+src/app/auth/login/page.tsx(51,52): error TS2304: Cannot find name 'err'.
+src/app/auth/login/page.tsx(52,25): error TS2304: Cannot find name 'err'.
+src/app/auth/login/page.tsx(52,48): error TS2304: Cannot find name 'err'.
+src/app/auth/signup/page.tsx(41,22): error TS2304: Cannot find name 'err'.
+src/app/auth/signup/page.tsx(41,45): error TS2304: Cannot find name 'err'.
+src/components/ui/ReviewSection.tsx(172,26): error TS2304: Cannot find name 'e'.
+src/components/ui/ReviewSection.tsx(172,47): error TS2304: Cannot find name 'e'.
+src/context/AuthContext.tsx(42,16): error TS2358: The left-hand side of an 'instanceof' expression must be of type 'any', an object type or a type parameter.
+src/context/AuthContext.tsx(56,24): error TS2304: Cannot find name 'err'.
+src/lib/youtube-stream.ts(887,25): error TS2304: Cannot find name 'err'.
+src/lib/youtube-stream.ts(887,48): error TS2304: Cannot find name 'err'.

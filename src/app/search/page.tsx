@@ -71,20 +71,20 @@ export default function SearchPage() {
             if (data.success && data.data) {
                 setResults({
                     tracks: finalTracks,
-                    artists: (data.data.artists ?? []).map((artist: any) => ({
+                    artists: (data.data.artists ?? []).map((artist: { artistId: string; name: string; thumbnail: string; subscribers?: string }) => ({
                         id: artist.artistId,
                         name: artist.name,
                         thumbnail: artist.thumbnail,
                         subscribers: artist.subscribers,
                     })),
-                    albums: (data.data.albums ?? []).map((album: any) => ({
+                    albums: (data.data.albums ?? []).map((album: { albumId: string; title: string; artist: string; thumbnail: string; year?: string }) => ({
                         id: album.albumId,
                         title: album.title,
                         artist: album.artist,
                         thumbnail: album.thumbnail,
                         year: album.year,
                     })),
-                    playlists: (data.data.playlists ?? []).map((playlist: any) => ({
+                    playlists: (data.data.playlists ?? []).map((playlist: { playlistId: string; title: string; author?: string; thumbnail: string; trackCount?: number }) => ({
                         id: playlist.playlistId,
                         title: playlist.title,
                         author: playlist.author ?? 'Unknown',
@@ -93,7 +93,7 @@ export default function SearchPage() {
                     })),
                 });
             }
-        } catch (err) {
+        } catch {
             // Silenced for production
         } finally {
             setLoading(false);
@@ -187,7 +187,6 @@ export default function SearchPage() {
                             placeholder="Search songs, artists, albums..."
                             className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/[0.06] border border-white/[0.06] text-white text-fluid-sm placeholder:text-white/25 outline-none focus:border-white/15 focus:bg-white/[0.08] transition-all"
                         />
-                        {loading && <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-primary" />}
                     </div>
                 </form>
 

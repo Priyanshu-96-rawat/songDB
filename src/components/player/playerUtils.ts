@@ -1,6 +1,5 @@
 "use client";
 
-import { useYouTubePlayerStore } from "@/store/youtubePlayer";
 
 export function formatTime(value: number) {
     if (!Number.isFinite(value) || value <= 0) return "0:00";
@@ -10,7 +9,7 @@ export function formatTime(value: number) {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export function getLyricsStatus(lyrics: any) {
+export function getLyricsStatus(lyrics: { timingMode?: string } | null) {
     if (!lyrics) return "Unavailable";
     if (lyrics.timingMode === "synced") return "Synced";
     if (lyrics.timingMode === "estimated") return "Estimated";

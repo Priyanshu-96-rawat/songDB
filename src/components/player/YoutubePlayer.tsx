@@ -14,7 +14,6 @@ import {
     Loader2,
     Pause,
     Play,
-    Radio,
     Repeat,
     Repeat1,
     Shuffle,
@@ -29,19 +28,12 @@ import {
     X,
 } from "lucide-react";
 import { getActiveLyricIndex } from "@/lib/youtube-stream";
-import { audioEngine } from "@/lib/player/audioEngine";
 import { TrackActionMenu } from "@/components/ui/TrackActionMenu";
 import { useLibraryStore } from "@/store/library";
 import { useYouTubePlayerStore, type YouTubeTrack } from "@/store/youtubePlayer";
 import { formatTime, getLyricsStatus, getSleepTimerStatus } from "./playerUtils";
 
-const chromeButton =
-    "inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/70 transition hover:border-white/20 hover:bg-white/10 hover:text-white";
-const waveHeights = Array.from({ length: 56 }, (_, index) => {
-    const primary = Math.sin(index * 0.55) * 0.45;
-    const secondary = Math.cos(index * 0.23) * 0.25;
-    return Math.max(18, Math.round((primary + secondary + 1.2) * 34));
-});
+
 
 function accentStyle(alpha = 0.14, customColor?: string) {
     const color = customColor || "var(--color-primary)";
@@ -322,7 +314,6 @@ export default function YoutubePlayer() {
         expandedTab,
         isExpanded,
         setIsExpanded,
-        setIsPlaying,
         togglePlay,
         setProgress,
         setVolume,
@@ -335,8 +326,7 @@ export default function YoutubePlayer() {
         prevTrack,
         closePlayer,
         playTrack,
-        toggleAutoplay,
-        startRadio,
+        stopRadio,
         setExpandedTab,
         moveToTop,
         setSleepTimer,
@@ -344,7 +334,6 @@ export default function YoutubePlayer() {
     } = useYouTubePlayerStore();
     const { isLiked, toggleLike } = useLibraryStore();
 
-    const [expanded, setExpanded] = useState(false);
     const [hoverProgress, setHoverProgress] = useState<number | null>(null);
     const [sleepTimerNow, setSleepTimerNow] = useState(() => Date.now());
     const [accentColors, setAccentColors] = useState<{ primary: string; secondary: string; dark: string } | null>(null);
@@ -387,6 +376,10 @@ export default function YoutubePlayer() {
     useEffect(() => {
         if (!currentTrack?.thumbnail) return;
 
+        const timeoutId = setTimeout(() => {
+            extractColors();
+        }, 600); // 600ms debounce to prevent 429 rate limit on fast skips
+
         // Extract colors for dynamic theming
         async function extractColors() {
             try {
@@ -403,14 +396,14 @@ export default function YoutubePlayer() {
                         dark: palette.DarkVibrant?.hex || "#121218"
                     });
                 }
-            } catch (error) {
+            } catch {
                 // Color extraction failed — silently use fallback
                 setAccentColors(null);
             }
         }
 
-        extractColors();
-    }, [currentTrack?.videoId]);
+        return () => clearTimeout(timeoutId);
+    }, [currentTrack?.videoId, currentTrack?.thumbnail]);
 
     useEffect(() => {
         if (sleepTimerMode !== "minutes" || !sleepTimerEndsAt) return;
@@ -443,7 +436,6 @@ export default function YoutubePlayer() {
         await navigator.clipboard.writeText(`${currentTrack.title} - ${currentTrack.artist}\nhttps://music.youtube.com/watch?v=${currentTrack.videoId}`);
     };
 
-    const RepeatIcon = repeatMode === "one" ? Repeat1 : Repeat;
     const sleepTimerStatus = getSleepTimerStatus(sleepTimerMode, sleepTimerEndsAt, sleepTimerNow);
 
     return (
@@ -503,7 +495,16 @@ export default function YoutubePlayer() {
                                         <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-white/[0.04] shadow-2xl">
                                             <Image src={currentTrack.thumbnail} alt={currentTrack.title} fill priority className="object-cover" sizes="(max-width: 1024px) 80vw, 420px" />
                                             <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
-                                                {radioMode && <span className="rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">Radio</span>}
+                                                {radioMode && (
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={(e) => { e.stopPropagation(); stopRadio(); }}
+                                                        className="rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary)] hover:text-black hover:scale-105 active:scale-95"
+                                                        title="Click to stop radio mode"
+                                                    >
+                                                        Radio
+                                                    </button>
+                                                )}
                                                 {lyrics?.timingMode === "synced" && <span className="rounded-full bg-black/60 px-2.5 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">Synced</span>}
                                             </div>
                                         </div>
@@ -603,6 +604,15 @@ export default function YoutubePlayer() {
                                                         <div className="rounded-xl bg-white/[0.04] px-3 py-2 text-xs text-white/60">{getLyricsStatus(lyrics)}</div>
                                                         <div className="rounded-xl bg-white/[0.04] px-3 py-2 text-xs text-white/60">Autoplay: {autoplayEnabled ? "On" : "Off"}</div>
                                                         <div className="rounded-xl bg-white/[0.04] px-3 py-2 text-xs text-white/60">{formatTime(currentDuration)}</div>
+                                                        {radioMode && (
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={stopRadio}
+                                                                className="col-span-2 rounded-xl bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 px-3 py-2.5 text-xs font-semibold text-[var(--color-primary)] transition hover:bg-[var(--color-primary)] hover:text-black active:scale-[0.98]"
+                                                            >
+                                                                Stop radio station
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="rounded-2xl bg-white/[0.03] p-4">

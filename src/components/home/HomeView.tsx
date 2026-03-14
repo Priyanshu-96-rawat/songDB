@@ -209,7 +209,7 @@ function buildCandidates(
 
 export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
   const { recentlyPlayed, likedSongs, hasHydrated } = useLibraryStore();
-  const { playTrack, addToQueue } = useYouTubePlayerStore();
+  const { playTrack, addToQueue, addTracksToQueue } = useYouTubePlayerStore();
   const [timeSegment] = useState<TimeSegment>(() => getTimeSegment(new Date()));
   const [displayGreeting] = useState(() => getGreetingForSegment(getTimeSegment(new Date())));
   const [activeFlowFilter, setActiveFlowFilter] = useState<MusicFlowDimension | "all">("all");
@@ -269,22 +269,12 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
     : recentAnchor
       ? `Pick up with ${recentAnchor.title}.`
       : moodCopy.title;
-  const heroCopy = artistAffinity
-    ? `Your start row is now weighted toward ${artistAffinity}, your recent listens, and ${moodCopy.label.toLowerCase()} shelves from the live feed.`
-    : recentAnchor
-      ? "Your start row now adapts to recent listens, liked songs, and the latest feed refresh so the first tap feels personal instead of generic."
-      : moodCopy.copy;
-  const quickPickTitle = artistAffinity
-    ? `More from ${artistAffinity} and nearby lanes.`
-    : recentAnchor
-      ? "Keep this session moving."
-      : moodCopy.quickTitle;
-  const quickPickCopy = artistAffinity
-    ? "Quick picks now prioritize your strongest artist streak, then widen into matching shelves from home and discovery."
-    : recentAnchor
-      ? "Quick picks now prioritize your recent artists first, then blend in fresh discovery from the live home and explore feeds."
-      : moodCopy.quickCopy;
-  const primaryButtonLabel = recentAnchor ? "Resume Featured" : moodCopy.primaryAction;
+    const heroCopy = artistAffinity
+      ? `Your start row is now weighted toward ${artistAffinity}, your recent listens, and ${moodCopy.label.toLowerCase()} shelves from the live feed.`
+      : recentAnchor
+        ? "Your start row now adapts to recent listens, liked songs, and the latest feed refresh so the first tap feels personal instead of generic."
+        : moodCopy.copy;
+    const primaryButtonLabel = recentAnchor ? "Resume Featured" : moodCopy.primaryAction;
   const queueButtonLabel = recentAnchor ? "Queue Session" : moodCopy.queueAction;
   const flowFilters: Array<MusicFlowDimension | "all"> = ["all", "genre", "language", "country", "time", "artist", "category"];
   const visibleFlowFeed = flowFeed.filter((item) => activeFlowFilter === "all" || item.dimension === activeFlowFilter);
@@ -292,11 +282,11 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
   const handlePlayFeatured = () => {
     if (!featuredTrack) return;
     playTrack(featuredTrack);
-    spotlightTracks.forEach((track) => addToQueue(track));
+    addTracksToQueue(spotlightTracks);
   };
 
   const handleQueueSpotlight = () => {
-    spotlightTracks.forEach((track) => addToQueue(track));
+    addTracksToQueue(spotlightTracks);
   };
 
   const playFlowFeed = (startIndex = 0) => {
@@ -305,10 +295,12 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
     if (!startItem) return;
 
     playTrack(startItem.track);
-    selectedFeed
+    const remaining = selectedFeed
       .filter((_, index) => index !== startIndex)
       .slice(0, 24)
-      .forEach((item) => addToQueue(item.track));
+      .map((item) => item.track);
+    
+    addTracksToQueue(remaining);
   };
 
   return (
@@ -503,7 +495,7 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
                 type="button"
                 onClick={() => {
                   const selectedFeed = visibleFlowFeed.length > 0 ? visibleFlowFeed : flowFeed;
-                  selectedFeed.slice(0, 24).forEach((item) => addToQueue(item.track));
+                  addTracksToQueue(selectedFeed.slice(0, 24).map((item) => item.track));
                 }}
                 className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white/78 transition hover:border-white/18 hover:bg-white/[0.07]"
               >
@@ -602,7 +594,7 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
 
       <div className="space-y-6">
         {shelves.map((shelf, index) => (
-          <div key={`home-${index}`} className="rounded-[30px] shell-panel-soft py-5 pl-4 pr-1 sm:p-6">
+          <div key={`home-${index}`} className="min-w-0 rounded-[30px] shell-panel-soft py-5 pl-4 pr-1 sm:p-6">
             <MusicShelf
               title={shelf.title}
               subtitle={index === 0 ? "Fresh from the home feed" : undefined}
@@ -623,7 +615,7 @@ export function HomeView({ shelves, exploreShelves, flowFeed }: HomeViewProps) {
           </div>
           <div className="grid gap-6 xl:grid-cols-2">
             {exploreShelves.map((shelf, index) => (
-              <div key={`explore-${index}`} className="rounded-[30px] shell-panel-soft p-5 md:p-6">
+              <div key={`explore-${index}`} className="min-w-0 rounded-[30px] shell-panel-soft p-5 md:p-6">
                 <MusicShelf
                   title={shelf.title}
                   tracks={shelf.tracks}

@@ -68,7 +68,7 @@ export function MusicCard({ track, size = "md", subtitle, priority: isPriority =
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                             sizes={size === "lg" ? "208px" : size === "md" ? "176px" : "144px"}
                             onError={() => setImageFailed(true)}
-                            {...(isPriority ? { priority: true, loading: "eager" as const } : {})}
+                            loading="lazy"
                         />
                     ) : (
                         <div

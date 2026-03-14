@@ -11,7 +11,20 @@ import { useYouTubePlayerStore, type YouTubePlayerState } from "@/store/youtubeP
 declare global {
     interface Window {
         onYouTubeIframeAPIReady: () => void
-        YT: any
+        YT: {
+            Player: new (id: string, options: Record<string, unknown>) => {
+                destroy: () => void;
+                stopVideo: () => void;
+                pauseVideo: () => void;
+                playVideo: () => void;
+                loadVideoById: (id: string) => void;
+                seekTo: (time: number, allowSeekAhead: boolean) => void;
+                setVolume: (vol: number) => void;
+                getCurrentTime: () => number;
+                getDuration: () => number;
+                getVideoLoadedFraction: () => number;
+            };
+        };
         __audioEngine?: AudioEngine
     }
 }
@@ -19,27 +32,38 @@ declare global {
 const CONTAINER_ID = "yt-player-container"
 
 class AudioEngine {
-    private player: any = null
+    private player: {
+        destroy: () => void;
+        stopVideo: () => void;
+        pauseVideo: () => void;
+        playVideo: () => void;
+        loadVideoById: (id: string) => void;
+        seekTo: (time: number, allowSeekAhead: boolean) => void;
+        setVolume: (vol: number) => void;
+        getCurrentTime: () => number;
+        getDuration: () => number;
+        getVideoLoadedFraction: () => number;
+    } | null = null;
     private isApiLoaded = false
     private isPlayerReady = false
     private currentVideoId: string | null = null
     private progressInterval: ReturnType<typeof setInterval> | null = null
 
     constructor() {
-        if (typeof window !== "undefined") {
-            this.loadApi()
-        }
+        // We no longer load API automatically in constructor to prevent 429s on startup
     }
 
     /** Destroy the player cleanly (used during HMR cleanup) */
     destroy() {
         this.stopProgressUpdates()
         if (this.player) {
-            try {
-                this.player.stopVideo?.()
-                this.player.destroy?.()
-            } catch {
-                // Ignore destroy errors
+            if (this.isPlayerReady) {
+                try {
+                    this.player.stopVideo?.()
+                    this.player.destroy?.()
+                } catch {
+                    // Ignore destroy errors
+                }
             }
             this.player = null
         }
@@ -47,9 +71,13 @@ class AudioEngine {
     }
 
     private loadApi() {
+        if (typeof window === "undefined") return;
+
         // If the YT API is already loaded (e.g. from a previous HMR cycle), mark it
         if (typeof window.YT !== "undefined" && window.YT.Player) {
             this.isApiLoaded = true
+            if (this.currentVideoId) this.initPlayer(this.currentVideoId)
+            return
         }
 
         // Create container if it doesn't exist
@@ -67,7 +95,6 @@ class AudioEngine {
         }
 
         // Only inject the script once — check for existing script tag
-        if (this.isApiLoaded) return
         const existingScript = document.querySelector('script[src*="youtube.com/iframe_api"]')
         if (existingScript) {
             // Script tag exists but API not ready yet — wait for callback
@@ -75,6 +102,7 @@ class AudioEngine {
             window.onYouTubeIframeAPIReady = () => {
                 origCb?.()
                 this.isApiLoaded = true
+                useYouTubePlayerStore.setState({ isApiLoaded: true })
                 if (this.currentVideoId) this.initPlayer(this.currentVideoId)
             }
             return
@@ -87,6 +115,7 @@ class AudioEngine {
 
         window.onYouTubeIframeAPIReady = () => {
             this.isApiLoaded = true
+            useYouTubePlayerStore.setState({ isApiLoaded: true })
 
             if (this.currentVideoId) {
                 this.initPlayer(this.currentVideoId)
@@ -101,13 +130,17 @@ class AudioEngine {
         }
 
         if (this.player) {
-            try {
-                this.player.loadVideoById(videoId)
-            } catch {
-                // Player in bad state, recreate
-                this.player = null
-                this.isPlayerReady = false
-                this.initPlayer(videoId)
+            if (this.isPlayerReady) {
+                try {
+                    this.player.loadVideoById(videoId)
+                } catch {
+                    // Player in bad state, recreate
+                    this.player = null
+                    this.isPlayerReady = false
+                    this.initPlayer(videoId)
+                }
+            } else {
+                this.currentVideoId = videoId
             }
             return
         }
@@ -135,6 +168,11 @@ class AudioEngine {
             events: {
                 onReady: () => {
                     this.isPlayerReady = true
+                    
+                    // If currentVideoId changed while loading, load the new one
+                    if (this.currentVideoId && this.currentVideoId !== videoId) {
+                        this.player?.loadVideoById(this.currentVideoId)
+                    }
 
                     useYouTubePlayerStore.setState({ isLoading: false })
                     this.startProgressUpdates()
@@ -176,7 +214,7 @@ class AudioEngine {
                     }
                 },
 
-                onError: (event: { data: number }) => {
+                onError: () => {
 
                     useYouTubePlayerStore.setState({
                         isPlaying: false,
@@ -197,11 +235,21 @@ class AudioEngine {
         this.stopProgressUpdates()
 
         this.progressInterval = setInterval(() => {
-            if (!this.player || typeof this.player.getCurrentTime !== "function") return
+            if (!this.player || !this.isPlayerReady || typeof this.player.getCurrentTime !== "function") return
 
             const currentTime = this.player.getCurrentTime()
             const duration = this.player.getDuration()
             let bufferedPercent = 0
+
+            // GAPLESS OPTIMIZATION: Trigger next track early if we are very close to finishing
+            // YouTube transition natively adds ~1-2s gap; this masks it.
+            if (currentTime > 0 && duration > 0 && (duration - currentTime) < 0.5) {
+                const state = useYouTubePlayerStore.getState();
+                // Only trigger if we haven't already marked this specific video as ended
+                if (state.currentTrack && state.lastProcessedEndedVideoId !== state.currentTrack.videoId) {
+                    state.handleTrackEnded();
+                }
+            }
 
             if (typeof this.player.getVideoLoadedFraction === "function") {
                 bufferedPercent = (this.player.getVideoLoadedFraction() || 0) * 100
@@ -213,9 +261,9 @@ class AudioEngine {
             if (bufferedPercent >= 0) updates.bufferedPercent = bufferedPercent
 
             if (Object.keys(updates).length > 0) {
-                useYouTubePlayerStore.setState(updates as any)
+                useYouTubePlayerStore.setState(updates);
             }
-        }, 1000)
+        }, 500)
     }
 
     private stopProgressUpdates() {
@@ -229,6 +277,11 @@ class AudioEngine {
 
     play(videoId: string) {
         this.currentVideoId = videoId
+        
+        if (!this.isApiLoaded) {
+            this.loadApi()
+            return
+        }
 
         if (!this.player) {
             this.initPlayer(videoId)
@@ -274,14 +327,16 @@ class AudioEngine {
     }
 
     getCurrentTime(): number {
+        if (!this.isPlayerReady) return 0
         return this.player?.getCurrentTime?.() ?? 0
     }
 
     getDuration(): number {
+        if (!this.isPlayerReady) return 0
         return this.player?.getDuration?.() ?? 0
     }
 
-    preload(videoId: string) { }
+    preload() { }
 
 }
 

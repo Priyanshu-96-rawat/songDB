@@ -91,7 +91,6 @@ body {
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%),
     var(--color-background);
   color: var(--color-foreground);
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: var(--font-body), "Segoe UI", sans-serif;

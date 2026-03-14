@@ -52,8 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.user) {
         setUser(result.user);
       }
-    } catch (err: any) {
-      const errorCode = err?.code || "";
+    } catch (err) {
+      const errorObj = err as { code?: string; message?: string };
+      const errorCode = errorObj.code || "";
       
       // Silently ignore — user just closed the popup
       if (
@@ -64,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Catch and store error for UI display only
-      setError(err.message || "Sign-in failed.");
+      setError(errorObj.message || "Sign-in failed.");
     }
   };
 

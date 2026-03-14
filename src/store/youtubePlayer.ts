@@ -41,6 +41,7 @@ export interface YouTubePlayerState {
     progress: number;
     bufferedPercent: number;
     duration: number;
+    lastProcessedEndedVideoId: string | null;
     volume: number;
     isMuted: boolean;
     repeatMode: 'off' | 'all' | 'one';
@@ -50,6 +51,7 @@ export interface YouTubePlayerState {
 
     // Player visibility
     isPlayerVisible: boolean;
+    isApiLoaded: boolean;
 
     // Expanded player tab
     expandedTab: 'player' | 'lyrics' | 'queue';
@@ -67,6 +69,7 @@ export interface YouTubePlayerState {
     cycleRepeat: () => void;
     toggleShuffle: () => void;
     addToQueue: (track: YouTubeTrack) => void;
+    addTracksToQueue: (tracks: YouTubeTrack[]) => void;
     playNext: (track: YouTubeTrack) => void;
     removeFromQueue: (index: number) => void;
     clearQueue: () => void;
@@ -81,9 +84,10 @@ export interface YouTubePlayerState {
     fetchLyrics: (videoId: string, durationSeconds?: number) => Promise<void>;
     setUpNextTracks: (tracks: YouTubeTrack[]) => void;
     fetchUpNext: (videoId: string) => Promise<void>;
-    toggleAutoplay: () => void;
-    startRadio: (track: YouTubeTrack) => void;
-    setExpandedTab: (tab: 'player' | 'lyrics' | 'queue') => void;
+        toggleAutoplay: () => void;
+        startRadio: (track: YouTubeTrack) => void;
+        stopRadio: () => void;
+        setExpandedTab: (tab: 'player' | 'lyrics' | 'queue') => void;
     moveToTop: (index: number) => void;
     setSleepTimer: (mode: 'off' | 'minutes' | 'end_of_track', minutes?: number) => void;
     clearSleepTimer: () => void;
@@ -97,25 +101,6 @@ function clearSleepTimerTimeout() {
     if (sleepTimerTimeout !== null) {
         clearTimeout(sleepTimerTimeout);
         sleepTimerTimeout = null;
-    }
-}
-
-function loadStoredValue<T>(key: string, fallback: T): T {
-    if (typeof window === 'undefined') return fallback;
-    try {
-        const stored = localStorage.getItem(key);
-        return stored ? JSON.parse(stored) as T : fallback;
-    } catch {
-        return fallback;
-    }
-}
-
-function saveStoredValue(key: string, value: unknown) {
-    if (typeof window === 'undefined') return;
-    try {
-        localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-        // Ignore storage errors.
     }
 }
 
@@ -162,6 +147,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
         progress: 0,
         bufferedPercent: 0,
         duration: 0,
+        lastProcessedEndedVideoId: null,
         volume: 1,
         isMuted: false,
         repeatMode: 'off',
@@ -169,6 +155,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
         sleepTimerMode: 'off',
         sleepTimerEndsAt: null,
         isPlayerVisible: false,
+        isApiLoaded: false,
         expandedTab: 'player',
 
         playTrack: (track) => {
@@ -185,6 +172,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                 progress: 0,
                 bufferedPercent: 0,
                 duration: track.durationSeconds || 0,
+                lastProcessedEndedVideoId: null,
                 history: newHistory.slice(-50),
                 isPlayerVisible: true,
                 expandedTab: 'player',
@@ -207,8 +195,14 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
             }
 
             // Auto-fetch lyrics and up next for the new track
-            get().fetchLyrics(track.videoId, track.durationSeconds);
-            get().fetchUpNext(track.videoId);
+            // Metadata fetching is deferred slightly or based on needs to avoid 429
+            setTimeout(() => {
+                const { currentTrack: trackNow } = get();
+                if (trackNow?.videoId === track.videoId) {
+                    get().fetchLyrics(track.videoId, track.durationSeconds);
+                    get().fetchUpNext(track.videoId);
+                }
+            }, 800);
         },
 
         setIsExpanded: (expanded) => set({ isExpanded: expanded }),
@@ -281,6 +275,39 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
             get().prefetchNextTrack();
         },
 
+        addTracksToQueue: (tracks) => {
+            if (tracks.length === 0) return;
+            const { currentTrack } = get();
+
+            if (!currentTrack) {
+                const [first, ...rest] = tracks;
+                set({
+                    currentTrack: first,
+                    isExpanded: true,
+                    isPlaying: true,
+                    isLoading: true,
+                    progress: 0,
+                    bufferedPercent: 0,
+                    duration: first.durationSeconds || 0,
+                    lastProcessedEndedVideoId: null,
+                    isPlayerVisible: true,
+                    expandedTab: 'player',
+                    lyrics: null,
+                    isLoadingLyrics: false,
+                    queue: [...get().queue, ...rest]
+                });
+
+                if (typeof window !== 'undefined') {
+                    audioEngine.play(first.videoId);
+                }
+                get().fetchLyrics(first.videoId, first.durationSeconds);
+                get().fetchUpNext(first.videoId);
+            } else {
+                set((s) => ({ queue: [...s.queue, ...tracks] }));
+            }
+            get().prefetchNextTrack();
+        },
+
         playNext: (track) => {
             if (get().currentTrack?.videoId === track.videoId) {
                 return;
@@ -323,7 +350,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
             const { queue, isShuffled, repeatMode, currentTrack, autoplayEnabled, upNextTracks } = get();
 
             if (repeatMode === 'one' && currentTrack) {
-                set({ progress: 0, isPlaying: true, isLoading: true });
+                set({ progress: 0, isPlaying: true, isLoading: true, lastProcessedEndedVideoId: null });
                 if (typeof window !== 'undefined') {
                     audioEngine.seek(0);
                     audioEngine.resume();
@@ -351,6 +378,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                     isLoading: true,
                     progress: 0,
                     duration: nextTrack.durationSeconds || 0,
+                    lastProcessedEndedVideoId: null,
                     lyrics: null,
                     isLoadingLyrics: false,
                 });
@@ -364,8 +392,9 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
 
             // 2. If autoplay enabled, use Up Next tracks
             if (autoplayEnabled && upNextTracks.length > 0) {
-                const nextTrack = upNextTracks[0];
-                const remainingUpNext = upNextTracks.slice(1);
+                const nextIndex = isShuffled ? Math.floor(Math.random() * upNextTracks.length) : 0;
+                const nextTrack = upNextTracks[nextIndex];
+                const remainingUpNext = upNextTracks.filter((_, i) => i !== nextIndex);
                 const newHistory = currentTrack
                     ? [...get().history, currentTrack].slice(-50)
                     : get().history;
@@ -378,6 +407,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                     isLoading: true,
                     progress: 0,
                     duration: nextTrack.durationSeconds || 0,
+                    lastProcessedEndedVideoId: null,
                     lyrics: null,
                     isLoadingLyrics: false,
                 });
@@ -440,6 +470,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                 progress: 0,
                 bufferedPercent: 0,
                 duration: prevTrack.durationSeconds || 0,
+                lastProcessedEndedVideoId: null,
                 lyrics: null,
                 isLoadingLyrics: false,
             });
@@ -452,7 +483,17 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
         },
 
         handleTrackEnded: () => {
-            if (get().sleepTimerMode === 'end_of_track') {
+            const { currentTrack, lastProcessedEndedVideoId, sleepTimerMode } = get();
+            
+            // Prevent double-triggering (e.g. Early Trigger + Native End Event)
+            if (!currentTrack || lastProcessedEndedVideoId === currentTrack.videoId) {
+                return null;
+            }
+
+            // Mark this video as processed for the end event
+            set({ lastProcessedEndedVideoId: currentTrack.videoId });
+
+            if (sleepTimerMode === 'end_of_track') {
                 clearSleepTimerTimeout();
                 set({
                     isPlaying: false,
@@ -571,6 +612,10 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
             get().playTrack(track);
         },
 
+        stopRadio: () => {
+            set({ radioMode: false });
+        },
+
         setExpandedTab: (tab) => set({ expandedTab: tab }),
 
         setSleepTimer: (mode, minutes) => {
@@ -616,7 +661,7 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
             const { queue, upNextTracks, autoplayEnabled } = get();
             const nextTrack = queue[0] ?? (autoplayEnabled ? upNextTracks[0] : null);
             if (nextTrack) {
-                audioEngine.preload(nextTrack.videoId);
+                audioEngine.preload();
             }
         },
     };
