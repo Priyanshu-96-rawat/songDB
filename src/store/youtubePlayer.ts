@@ -105,31 +105,6 @@ function clearSleepTimerTimeout() {
 }
 
 export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
-
-    // AudioEngine handles direct store updates via its own events (timeupdate, loadedmetadata, ended)
-    if (typeof window !== 'undefined') {
-        // Initialize Media Session API hooks on mount
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.setActionHandler('play', () => get().setIsPlaying(true));
-            navigator.mediaSession.setActionHandler('pause', () => get().setIsPlaying(false));
-            navigator.mediaSession.setActionHandler('previoustrack', () => { get().prevTrack(); });
-            navigator.mediaSession.setActionHandler('nexttrack', () => { get().nextTrack(); });
-            navigator.mediaSession.setActionHandler('seekto', (details) => {
-                if (details.seekTime !== undefined) {
-                    get().setProgress(details.seekTime);
-                }
-            });
-            navigator.mediaSession.setActionHandler('seekbackward', () => {
-                const newTime = Math.max(0, audioEngine.getCurrentTime() - 10);
-                get().setProgress(newTime);
-            });
-            navigator.mediaSession.setActionHandler('seekforward', () => {
-                const newTime = Math.min(get().duration, audioEngine.getCurrentTime() + 10);
-                get().setProgress(newTime);
-            });
-        }
-    }
-
     return {
         currentTrack: null,
         isExpanded: false,
@@ -180,18 +155,9 @@ export const useYouTubePlayerStore = create<YouTubePlayerState>((set, get) => {
                 isLoadingLyrics: false,
             });
 
-            // Play via our new AudioEngine
+            // Play via AudioEngine which now also handles MediaSession updates
             if (typeof window !== 'undefined') {
                 audioEngine.play(track.videoId);
-
-                if ('mediaSession' in navigator) {
-                    navigator.mediaSession.metadata = new MediaMetadata({
-                        title: track.title,
-                        artist: track.artist,
-                        album: track.album || 'YouTube Music',
-                        artwork: [{ src: track.thumbnail, sizes: '512x512', type: 'image/jpeg' }]
-                    });
-                }
             }
 
             // Auto-fetch lyrics and up next for the new track

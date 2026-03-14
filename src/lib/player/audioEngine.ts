@@ -188,15 +188,18 @@ class AudioEngine {
                                 isLoading: false,
                             })
                             this.startProgressUpdates()
+                            this.updateMediaPlaybackState(true)
                             break
 
                         case 2:
                             useYouTubePlayerStore.setState({ isPlaying: false })
                             this.stopProgressUpdates()
+                            this.updateMediaPlaybackState(false)
                             break
 
                         case 3:
                             useYouTubePlayerStore.setState({ isLoading: true })
+                            this.updateMediaMetadata()
                             break
 
                         case 0:
@@ -205,6 +208,7 @@ class AudioEngine {
                                 isLoading: false,
                             })
                             this.stopProgressUpdates()
+                            this.updateMediaPlaybackState(false)
                             useYouTubePlayerStore.getState().handleTrackEnded()
                             break
 
@@ -262,6 +266,7 @@ class AudioEngine {
 
             if (Object.keys(updates).length > 0) {
                 useYouTubePlayerStore.setState(updates);
+                this.updateMediaPositionState(currentTime, duration);
             }
         }, 500)
     }
@@ -271,6 +276,85 @@ class AudioEngine {
             clearInterval(this.progressInterval)
             this.progressInterval = null
         }
+    }
+
+    /** Set/Update Media Session metadata for lock screen & notifications */
+    private updateMediaMetadata() {
+        if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+
+        const { currentTrack } = useYouTubePlayerStore.getState();
+        if (!currentTrack) return;
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: currentTrack.title,
+            artist: currentTrack.artist,
+            album: "YouTube Music",
+            artwork: [
+                { src: currentTrack.thumbnail, sizes: '96x96', type: 'image/jpeg' },
+                { src: currentTrack.thumbnail, sizes: '128x128', type: 'image/jpeg' },
+                { src: currentTrack.thumbnail, sizes: '192x192', type: 'image/jpeg' },
+                { src: currentTrack.thumbnail, sizes: '256x256', type: 'image/jpeg' },
+                { src: currentTrack.thumbnail, sizes: '384x384', type: 'image/jpeg' },
+                { src: currentTrack.thumbnail, sizes: '512x512', type: 'image/jpeg' },
+            ],
+        });
+
+        this.setupMediaSessionHandlers();
+    }
+
+    /** Synchronize playback position with Media Session */
+    private updateMediaPositionState(currentTime: number, duration: number) {
+        if (typeof window === "undefined" || !("mediaSession" in navigator) || !("setPositionState" in navigator.mediaSession)) return;
+        
+        try {
+            if (typeof currentTime === "number" && typeof duration === "number" && duration > 0) {
+                navigator.mediaSession.setPositionState({
+                    duration: duration,
+                    playbackRate: 1.0,
+                    position: currentTime,
+                });
+            }
+        } catch (e) {
+            // Silently fail if position state is invalid
+        }
+    }
+
+    /** Update playback state (playing/paused) for Media Session */
+    private updateMediaPlaybackState(isPlaying: boolean) {
+        if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+        navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    }
+
+    /** Handle native OS media controls (notification/lock screen buttons) */
+    private setupMediaSessionHandlers() {
+        if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
+
+        const store = useYouTubePlayerStore.getState();
+
+        const actionHandlers: [MediaSessionAction, () => void][] = [
+            ['play', () => store.togglePlay()],
+            ['pause', () => store.togglePlay()],
+            ['previoustrack', () => store.prevTrack()],
+            ['nexttrack', () => store.nextTrack()],
+            ['stop', () => store.closePlayer()],
+        ];
+
+        for (const [action, handler] of actionHandlers) {
+            try {
+                navigator.mediaSession.setActionHandler(action, handler);
+            } catch (error) {
+                // Feature not supported
+            }
+        }
+
+        // Seek handlers
+        try {
+            navigator.mediaSession.setActionHandler('seekto', (details) => {
+                if (details.seekTime !== undefined) {
+                    this.seek(details.seekTime);
+                }
+            });
+        } catch (e) {}
     }
 
     // PUBLIC API
@@ -305,12 +389,14 @@ class AudioEngine {
     pause() {
         if (this.player && this.isPlayerReady) {
             this.player.pauseVideo()
+            this.updateMediaPlaybackState(false)
         }
     }
 
     resume() {
         if (this.player && this.isPlayerReady) {
             this.player.playVideo()
+            this.updateMediaPlaybackState(true)
         }
     }
 
