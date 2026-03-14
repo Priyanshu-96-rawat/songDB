@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { type YouTubeTrack } from "@/store/youtubePlayer";
 import { MusicCard } from "@/components/ui/MusicCard";
 import { TrackRow } from "@/components/ui/TrackRow";
+import { useDraggableScroll } from "@/hooks/useDraggableScroll";
 
 interface MusicShelfProps {
     title: string;
@@ -25,6 +26,8 @@ export function MusicShelf({
     maxItems = 10,
     cardSize = "md",
 }: MusicShelfProps) {
+    const scrollRef = useDraggableScroll();
+
     if (!tracks || tracks.length === 0) return null;
 
     const displayTracks = tracks.slice(0, maxItems);
@@ -50,7 +53,7 @@ export function MusicShelf({
 
             {/* Content */}
             {layout === "scroll" && (
-                <div className="flex gap-fluid overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
+                <div ref={scrollRef} className="flex gap-fluid overflow-x-auto pb-2 scrollbar-hide -mx-2 px-2">
                     {displayTracks.map((track, i) => (
                         <MusicCard key={`${track.videoId}-${i}`} track={track} size={cardSize} priority={i < 4} />
                     ))}

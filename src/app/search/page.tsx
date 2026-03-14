@@ -8,6 +8,7 @@ import { Search, Loader2, Music2, Users, Disc3, ListMusic } from "lucide-react";
 import { motion } from "framer-motion";
 import { TrackRow } from "@/components/ui/TrackRow";
 import { type YouTubeTrack } from "@/store/youtubePlayer";
+import { useDraggableScroll } from "@/hooks/useDraggableScroll";
 
 type SearchTab = "songs" | "videos" | "artists" | "albums" | "playlists";
 
@@ -21,6 +22,7 @@ interface SearchResults {
 export default function SearchPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const scrollRef = useDraggableScroll();
     const initialQuery = searchParams.get("q") || "";
 
     const [query, setQuery] = useState(initialQuery);
@@ -216,7 +218,7 @@ export default function SearchPage() {
             {showSuggestions && <div className="fixed inset-0 z-10" onClick={() => setShowSuggestions(false)} />}
 
             {hasSearched && (
-                <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide">
+                <div ref={scrollRef} className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide">
                     {tabs.map(({ key, label, icon: Icon }) => (
                         <button
                             key={key}
@@ -242,7 +244,7 @@ export default function SearchPage() {
                     {(activeTab === "songs" || activeTab === "videos") && results.tracks.length > 0 && (
                         <div className="space-y-0.5">
                             {results.tracks.map((track, i) => (
-                                <TrackRow key={`${track.videoId}-${i}`} track={track} index={i} showIndex />
+                                <TrackRow key={`${track.videoId}-${i}`} track={track} index={i} showIndex priority={i === 0} />
                             ))}
                         </div>
                     )}

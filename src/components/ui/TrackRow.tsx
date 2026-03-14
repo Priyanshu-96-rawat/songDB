@@ -12,9 +12,10 @@ interface TrackRowProps {
     index?: number;
     showIndex?: boolean;
     compact?: boolean;
+    priority?: boolean;
 }
 
-export function TrackRow({ track, index, showIndex = false, compact = false }: TrackRowProps) {
+export function TrackRow({ track, index, showIndex = false, compact = false, priority = false }: TrackRowProps) {
     const { playTrack, addToQueue, currentTrack, isPlaying } = useYouTubePlayerStore();
     const { isLiked, toggleLike } = useLibraryStore();
     const isMounted = useIsMounted();
@@ -42,7 +43,7 @@ export function TrackRow({ track, index, showIndex = false, compact = false }: T
 
             {/* Thumbnail */}
             <div className={`relative ${compact ? 'h-9 w-9 sm:h-10 sm:w-10' : 'h-10 w-10 sm:h-12 sm:w-12'} rounded-lg sm:rounded-xl overflow-hidden bg-white/[0.05] flex-shrink-0 shadow-lg`}>
-                <Image src={track.thumbnail} alt={track.title} fill className="object-cover transition-transform duration-500 group-hover:scale-110" sizes={compact ? "40px" : "48px"} />
+                <Image src={track.thumbnail} alt={track.title} fill className="object-cover transition-transform duration-500 group-hover:scale-110" sizes={compact ? "40px" : "48px"} priority={priority} />
                 {isCurrentTrack && isPlaying && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <div className="flex items-end gap-[2px] h-3.5">
